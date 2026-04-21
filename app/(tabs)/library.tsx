@@ -3,14 +3,14 @@ import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { POSITION_TABS, TECHNIQUES, type PositionTab, type Technique } from "../data/techniques";
-import { defaultProgress, loadProgress, type UserProgress } from "../store/progress";
+import { CURRICULUM_BELTS, defaultProgress, loadProgress, updateCurrentBelt, type BeltLevel, type UserProgress } from "../store/progress";
 import { loadMyTechniques } from "../store/myTechniques";
 
 type LibraryMode = "all" | "mine";
 
 export default function LibraryScreen() {
   const router = useRouter();
-  const [activePosition, setActivePosition] = useState<PositionTab>("Back / Rear Mount");
+  const [activePosition, setActivePosition] = useState<PositionTab>(POSITION_TABS[0]);
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
   const [myTechniques, setMyTechniques] = useState<Technique[]>([]);
   const [libraryMode, setLibraryMode] = useState<LibraryMode>("all");
@@ -38,6 +38,29 @@ export default function LibraryScreen() {
       <Text style={{ color: "#D4B06A", fontWeight: "700" }}>
         {progress.currentBelt.toUpperCase()} Belt Curriculum
       </Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {(CURRICULUM_BELTS as unknown as BeltLevel[]).map((belt) => {
+          const selected = belt === progress.currentBelt;
+          return (
+            <Pressable
+              key={belt}
+              onPress={() => {
+                void updateCurrentBelt(belt).then(setProgress);
+              }}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: selected ? "#D4B06A" : "#2A2A2A",
+                backgroundColor: selected ? "rgba(212,176,106,0.18)" : "#101010",
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "800", textTransform: "capitalize" }}>{belt} belt</Text>
+            </Pressable>
+          );
+        })}
+      </View>
       <View style={{ flexDirection: "row", gap: 8 }}>
         <Pressable
           onPress={() => setLibraryMode("all")}
@@ -143,7 +166,7 @@ export default function LibraryScreen() {
         >
           <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>No techniques in this tab yet.</Text>
           <Text style={{ color: "#8E96A5", marginTop: 4 }}>
-            More {activePosition.toLowerCase()} content will unlock soon.
+            Add techniques from the All list to My Library, or switch belt above to see the full curriculum.
           </Text>
         </View>
       ) : null}
