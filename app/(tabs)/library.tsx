@@ -18,16 +18,16 @@ export default function LibraryScreen() {
   const filtered = useMemo(
     () =>
       TECHNIQUES.filter(
-        (item) => item.position === activePosition && item.belt === progress.currentBelt
+        (item) => item.position === activePosition && item.belt === "white"
       ),
-    [activePosition, progress.currentBelt]
+    [activePosition]
   );
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: "#050505" }} contentContainerStyle={{ padding: 16, gap: 14 }}>
       <Text style={{ color: "#FFFFFF", fontSize: 28, fontWeight: "900" }}>Technique Library</Text>
       <Text style={{ color: "#D4B06A", fontWeight: "700" }}>
-        {progress.currentBelt} Belt Curriculum
+        White Belt Curriculum
       </Text>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
@@ -63,7 +63,7 @@ export default function LibraryScreen() {
       >
         <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 16 }}>{activePosition}</Text>
         <Text style={{ color: "#9AA2B1", marginTop: 4 }}>
-          {filtered.length} technique{filtered.length === 1 ? "" : "s"} available for {progress.currentBelt} belt.
+          {filtered.length} technique{filtered.length === 1 ? "" : "s"} available for white belt.
         </Text>
       </View>
 
@@ -84,7 +84,7 @@ export default function LibraryScreen() {
           >
             <Text style={{ color: "#FFF", fontSize: 17, fontWeight: "800" }}>{tech.name}</Text>
             <Text style={{ color: "#AAB2C2" }}>
-              {tech.belt} • Stripe {tech.stripes} • {tech.difficulty}
+              {tech.category} • {tech.difficulty}
             </Text>
             <Text style={{ color: "#8E96A5" }}>{tech.shortDescription}</Text>
             <Text style={{ color: mastered ? "#D4B06A" : "#E10600", fontWeight: "800" }}>
