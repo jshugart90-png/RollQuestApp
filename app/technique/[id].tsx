@@ -1,9 +1,10 @@
 import { Stack, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getTechniqueById } from "../data/techniques";
 import { defaultProgress, loadProgress, toggleLearnedTechnique, type UserProgress } from "../store/progress";
-import { useEffect, useState } from "react";
+import { addMyTechnique, loadMyTechniques } from "../store/myTechniques";
 
 export default function TechniqueDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -25,7 +26,6 @@ export default function TechniqueDetailScreen() {
           headerStyle: { backgroundColor: "#111" },
           headerTintColor: "#fff",
           headerTitleStyle: { fontWeight: "bold", color: "#fff" },
-          headerBackTitleVisible: false,
         }}
       />
       {!technique ? (
