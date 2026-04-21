@@ -1,15 +1,22 @@
-import { Tabs } from "expo-router";
-import React from "react";
+import { Tabs } from 'expo-router';
+import { useColorScheme } from 'react-native';
 
-export default function TabsLayout() {
+export default function TabLayout() {
+  const colorScheme = useColorScheme();
+
   return (
-    <Tabs screenOptions={{ headerShown: true }}>
-      <Tabs.Screen name="index" options={{ title: "Home" }} />
-      <Tabs.Screen name="learn" options={{ title: "Learn" }} />
-      <Tabs.Screen name="daily" options={{ title: "Daily Roll" }} />
-      <Tabs.Screen name="path" options={{ title: "My Path" }} />
-      <Tabs.Screen name="kids" options={{ title: "Kids" }} />
-      <Tabs.Screen name="gym" options={{ title: "Gym" }} />
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colorScheme === 'dark' ? '#111' : '#fff',
+        },
+      }}
+    >
+      {/* Add your tabs here as you build them */}
+      <Tabs.Screen name="index" options={{ title: 'Home' }} />
+      {/* <Tabs.Screen name="learn" options={{ title: 'Learn' }} /> */}
+      {/* <Tabs.Screen name="drills" options={{ title: 'Drills' }} /> etc. */}
     </Tabs>
   );
 }
