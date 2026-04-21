@@ -43,6 +43,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />,
         }}
       />
+      <Tabs.Screen
+        name="notes"
+        options={{
+          title: 'Notes',
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="notebook-edit-outline" color={color} size={size} />,
+        }}
+      />
     </Tabs>
   );
 }

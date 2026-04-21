@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const PROGRESS_KEY = "rollquest.progress.v1";
 
-export type BeltLevel = "White" | "Blue" | "Purple" | "Brown" | "Black";
+export type BeltLevel = "white" | "blue" | "purple" | "brown" | "black";
 
 export type UserProgress = {
   currentBelt: BeltLevel;
@@ -12,7 +12,7 @@ export type UserProgress = {
 };
 
 export const defaultProgress: UserProgress = {
-  currentBelt: "White",
+  currentBelt: "white",
   streakDays: 3,
   dailyGoal: 3,
   learnedTechniqueIds: [],
@@ -23,9 +23,12 @@ export async function loadProgress(): Promise<UserProgress> {
     const raw = await AsyncStorage.getItem(PROGRESS_KEY);
     if (!raw) return defaultProgress;
     const parsed = JSON.parse(raw) as Partial<UserProgress>;
+    const normalizedBelt =
+      typeof parsed.currentBelt === "string" ? parsed.currentBelt.toLowerCase() as BeltLevel : defaultProgress.currentBelt;
     return {
       ...defaultProgress,
       ...parsed,
+      currentBelt: normalizedBelt,
       learnedTechniqueIds: Array.isArray(parsed.learnedTechniqueIds) ? parsed.learnedTechniqueIds : [],
     };
   } catch {

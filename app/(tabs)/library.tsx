@@ -1,34 +1,71 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { POSITION_TABS, TECHNIQUES, type PositionTab } from "../data/techniques";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { POSITION_TABS, TECHNIQUES, type PositionTab, type Technique } from "../data/techniques";
 import { defaultProgress, loadProgress, type UserProgress } from "../store/progress";
+import { loadMyTechniques } from "../store/myTechniques";
+
+type LibraryMode = "all" | "mine";
 
 export default function LibraryScreen() {
   const router = useRouter();
   const [activePosition, setActivePosition] = useState<PositionTab>("Back / Rear Mount");
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
+  const [myTechniques, setMyTechniques] = useState<Technique[]>([]);
+  const [libraryMode, setLibraryMode] = useState<LibraryMode>("all");
 
   useFocusEffect(
     useCallback(() => {
       void loadProgress().then(setProgress);
+      void loadMyTechniques().then(setMyTechniques);
     }, [])
   );
 
+  const source = libraryMode === "mine" ? myTechniques : TECHNIQUES;
   const filtered = useMemo(
     () =>
-      TECHNIQUES.filter(
-        (item) => item.position === activePosition && item.belt === "white"
+      source.filter(
+        (item) => item.position === activePosition && item.belt === progress.currentBelt
       ),
-    [activePosition]
+    [activePosition, progress.currentBelt, source]
   );
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: "#050505" }} contentContainerStyle={{ padding: 16, gap: 14 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["top"]}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14 }}>
       <Text style={{ color: "#FFFFFF", fontSize: 28, fontWeight: "900" }}>Technique Library</Text>
       <Text style={{ color: "#D4B06A", fontWeight: "700" }}>
-        White Belt Curriculum
+        {progress.currentBelt.toUpperCase()} Belt Curriculum
       </Text>
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <Pressable
+          onPress={() => setLibraryMode("all")}
+          style={{
+            borderWidth: 1,
+            borderColor: libraryMode === "all" ? "#E10600" : "#2A2A2A",
+            backgroundColor: libraryMode === "all" ? "rgba(225,6,0,0.2)" : "#101010",
+            borderRadius: 999,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+          }}
+        >
+          <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>All Techniques</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setLibraryMode("mine")}
+          style={{
+            borderWidth: 1,
+            borderColor: libraryMode === "mine" ? "#D4B06A" : "#2A2A2A",
+            backgroundColor: libraryMode === "mine" ? "rgba(212,176,106,0.2)" : "#101010",
+            borderRadius: 999,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+          }}
+        >
+          <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>My Library</Text>
+        </Pressable>
+      </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
         {POSITION_TABS.map((position) => {
@@ -63,7 +100,7 @@ export default function LibraryScreen() {
       >
         <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 16 }}>{activePosition}</Text>
         <Text style={{ color: "#9AA2B1", marginTop: 4 }}>
-          {filtered.length} technique{filtered.length === 1 ? "" : "s"} available for white belt.
+          {filtered.length} technique{filtered.length === 1 ? "" : "s"} in {libraryMode === "mine" ? "My Library" : "All Techniques"}.
         </Text>
       </View>
 
@@ -111,5 +148,6 @@ export default function LibraryScreen() {
         </View>
       ) : null}
     </ScrollView>
+    </SafeAreaView>
   );
 }
