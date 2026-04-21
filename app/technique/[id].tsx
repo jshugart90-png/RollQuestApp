@@ -1,5 +1,6 @@
 import { Stack, useLocalSearchParams } from "expo-router";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { getTechniqueById } from "../data/techniques";
 import { defaultProgress, loadProgress, toggleLearnedTechnique, type UserProgress } from "../store/progress";
 import { useEffect, useState } from "react";
@@ -13,31 +14,59 @@ export default function TechniqueDetailScreen() {
     void loadProgress().then(setProgress);
   }, []);
 
-  if (!technique) {
-    return (
-      <View style={{ flex: 1, backgroundColor: "#050505", justifyContent: "center", alignItems: "center" }}>
-        <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "700" }}>Technique not found</Text>
-        <Text style={{ color: "#9AA2B1", marginTop: 6 }}>Return to Library and choose another movement.</Text>
-      </View>
-    );
-  }
-
-  const mastered = progress.learnedTechniqueIds.includes(technique.id);
-
-  async function onToggleMastered() {
-    const updated = await toggleLearnedTechnique(technique.id);
-    setProgress(updated);
-  }
-
   return (
     <>
       <Stack.Screen
         options={{
-          title: technique.name,
+          title: technique?.name || "Technique",
+          headerShown: true,
+          headerBackVisible: true,
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: "#111" },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "bold", color: "#fff" },
           headerBackTitleVisible: false,
         }}
       />
-      <ScrollView style={{ flex: 1, backgroundColor: "#050505" }} contentContainerStyle={{ paddingBottom: 24 }}>
+      {!technique ? (
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["bottom", "left", "right"]}>
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24 }}>
+            <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "700" }}>Technique not found</Text>
+            <Text style={{ color: "#9AA2B1", marginTop: 6, textAlign: "center" }}>
+              Return to Library and choose another movement.
+            </Text>
+          </View>
+        </SafeAreaView>
+      ) : (
+        <TechniqueBody technique={technique} progress={progress} onProgressChange={setProgress} />
+      )}
+    </>
+  );
+}
+
+function TechniqueBody({
+  technique,
+  progress,
+  onProgressChange,
+}: {
+  technique: NonNullable<ReturnType<typeof getTechniqueById>>;
+  progress: UserProgress;
+  onProgressChange: (p: UserProgress) => void;
+}) {
+  const mastered = progress.learnedTechniqueIds.includes(technique.id);
+
+  async function onToggleMastered() {
+    const updated = await toggleLearnedTechnique(technique.id);
+    onProgressChange(updated);
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["bottom", "left", "right"]}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: "#050505" }}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <View
           style={{
             padding: 18,
@@ -69,13 +98,13 @@ export default function TechniqueDetailScreen() {
                   borderWidth: 1,
                   borderColor: "#1B1B1B",
                   borderRadius: 12,
-                  padding: 12,
+                  padding: 14,
                 }}
               >
                 <View
                   style={{
-                    width: 26,
-                    height: 26,
+                    width: 28,
+                    height: 28,
                     borderRadius: 999,
                     backgroundColor: "#E10600",
                     justifyContent: "center",
@@ -83,9 +112,9 @@ export default function TechniqueDetailScreen() {
                     marginTop: 2,
                   }}
                 >
-                  <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 12 }}>{index + 1}</Text>
+                  <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 13 }}>{index + 1}</Text>
                 </View>
-                <Text style={{ color: "#E8ECF5", flex: 1, lineHeight: 21 }}>{step}</Text>
+                <Text style={{ color: "#E8ECF5", flex: 1, fontSize: 16, lineHeight: 24 }}>{step}</Text>
               </View>
             ))}
           </View>
@@ -119,7 +148,9 @@ export default function TechniqueDetailScreen() {
             }}
           >
             <Text style={{ color: "#D4B06A", fontWeight: "900", fontSize: 16 }}>Watch Exact YouTube Breakdown</Text>
-            <Text style={{ color: "#B7BECC", marginTop: 4 }}>Open the full video, study details, then drill with control and intention.</Text>
+            <Text style={{ color: "#B7BECC", marginTop: 4 }}>
+              Open the full video, study details, then drill with control and intention.
+            </Text>
           </Pressable>
 
           <Pressable
@@ -139,7 +170,7 @@ export default function TechniqueDetailScreen() {
           </Pressable>
         </View>
       </ScrollView>
-    </>
+    </SafeAreaView>
   );
 }
 
@@ -160,5 +191,6 @@ const sectionTitle = {
 
 const bulletText = {
   color: "#D3D9E5",
-  lineHeight: 21,
+  lineHeight: 22,
+  fontSize: 15,
 };
