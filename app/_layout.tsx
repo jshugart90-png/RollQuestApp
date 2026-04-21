@@ -5,18 +5,12 @@ import { useColorScheme } from 'react-native';
 
 import 'react-native-reanimated';
 
-export const unstable_settings = {
-  anchor: '(tabs)', // This tells the router where your tabs live
-};
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      <Stack screenOptions={{ headerShown: false }} />
       <StatusBar style="auto" />
     </ThemeProvider>
   );
