@@ -5,21 +5,21 @@ export type PositionTab =
   | "Side Control"
   | "Mount"
   | "Back / Rear Mount"
-  | "Turtle & Legs"
+  | "Turtle & Leg Entanglements"
   | "Submissions";
 
 export type Technique = {
   id: string;
   name: string;
-  belt: "White" | "Blue" | "Purple" | "Brown" | "Black";
-  stripes: 1 | 2 | 3 | 4;
+  belt: "white";
   position: PositionTab;
+  category: string;
   shortDescription: string;
   fullStepByStep: string[];
   tips: string[];
   commonMistakes: string[];
   youtubeUrl: string;
-  difficulty: "Fundamental" | "Intermediate" | "Advanced";
+  difficulty: "beginner";
 };
 
 export const POSITION_TABS: PositionTab[] = [
@@ -29,261 +29,901 @@ export const POSITION_TABS: PositionTab[] = [
   "Side Control",
   "Mount",
   "Back / Rear Mount",
-  "Turtle & Legs",
+  "Turtle & Leg Entanglements",
   "Submissions",
 ];
 
+const LINKS = {
+  standupBase: "https://www.youtube.com/results?search_query=gracie+university+bjj+standing+fundamentals",
+  guardBase: "https://www.youtube.com/results?search_query=chewjitsu+closed+guard+fundamentals",
+  passBase: "https://www.youtube.com/results?search_query=bjj+fanatics+guard+passing+fundamentals",
+  sideBase: "https://www.youtube.com/results?search_query=gracie+university+side+control+fundamentals",
+  mountBase: "https://www.youtube.com/results?search_query=chewjitsu+mount+control+bjj",
+  backBase: "https://www.youtube.com/results?search_query=bjj+fanatics+back+control+fundamentals",
+  turtleBase: "https://www.youtube.com/results?search_query=gracie+university+turtle+position+bjj",
+  subBase: "https://www.youtube.com/results?search_query=bjj+fanatics+white+belt+submissions",
+};
+
 export const TECHNIQUES: Technique[] = [
+  // Takedowns & Standing (6)
+  {
+    id: "white-stand-technical-standup",
+    name: "Technical Stand-Up",
+    belt: "white",
+    position: "Takedowns & Standing",
+    category: "Self-Protection Movement",
+    shortDescription: "Stand safely without giving your opponent a free leg to attack.",
+    fullStepByStep: [
+      "Post your hand behind you and place your opposite foot firmly on the mat, keeping your hips loaded like a spring.",
+      "Lift your hips and slide your bottom leg underneath you so your shin points away from danger, not toward your opponent.",
+      "Keep your eyes on the target, frame with your free hand, and bring your rear foot back into a stable grappling stance.",
+      "Only once your base is balanced, re-engage grips or create space to reset."
+    ],
+    tips: ["Keep your posting hand close, not stretched far behind.", "Think: frame, post, rise, and recover stance."],
+    commonMistakes: ["Standing straight up with no frame and getting tackled.", "Leaving your head down during the rise."],
+    youtubeUrl: LINKS.standupBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-stand-collar-tie-snapdown",
+    name: "Collar Tie Snap-Down",
+    belt: "white",
+    position: "Takedowns & Standing",
+    category: "Takedown Entry",
+    shortDescription: "Break posture from standing and create front-headlock opportunities.",
+    fullStepByStep: [
+      "Establish a collar tie with your palm heavy on the crown and your elbow tight to prevent inside pummeling.",
+      "Step slightly off line, pull the head down, and steer their shoulder to fold their posture forward.",
+      "As they react, circle to angle and connect your second hand to chin, triceps, or front headlock control.",
+      "If the takedown does not finish, use the snap-down to force a defensive reset and win initiative."
+    ],
+    tips: ["Your feet create the angle; your hands only guide.", "Snap in rhythm with a small step, not from a flat stance."],
+    commonMistakes: ["Pulling with arms only and getting counter-gripped.", "Leaving your own posture too high after the snap."],
+    youtubeUrl: LINKS.standupBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-stand-single-leg-finish",
+    name: "Single-Leg Basic Finish",
+    belt: "white",
+    position: "Takedowns & Standing",
+    category: "Takedown",
+    shortDescription: "Secure one leg, control posture, and finish with direction and pressure.",
+    fullStepByStep: [
+      "Level change with a straight back, step your lead foot close, and connect your shoulder to the opponent's hip.",
+      "Wrap the leg above the knee and keep your head tight on the inside line to prevent crossface pressure.",
+      "Drive up to your feet while lifting the leg and turning the corner so their base breaks diagonally.",
+      "Finish by running the pipe or shelving the leg, then settle directly into top control."
+    ],
+    tips: ["Head position is your steering wheel.", "Secure your hands before trying to lift."],
+    commonMistakes: ["Shooting from too far and reaching.", "Keeping your head outside with weak posture."],
+    youtubeUrl: LINKS.standupBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-stand-arm-drag-back-angle",
+    name: "Arm Drag to Rear Angle",
+    belt: "white",
+    position: "Takedowns & Standing",
+    category: "Off-Balance Entry",
+    shortDescription: "Use pull-and-step timing to create a back angle from neutral standing.",
+    fullStepByStep: [
+      "Catch the wrist with one hand and secure near the triceps with your second hand so the arm is connected to your chest.",
+      "Pull the arm across your center line while stepping your lead foot outside their lead foot.",
+      "Keep your chest close behind their shoulder and immediately lock body control before they square up.",
+      "From rear angle, choose mat return or body lock finish based on their reaction."
+    ],
+    tips: ["Drag with your whole body turn, not just your arms.", "Take the angle first, then think takedown."],
+    commonMistakes: ["Dragging in place with no foot movement.", "Pausing after the drag and losing the angle."],
+    youtubeUrl: LINKS.standupBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-stand-foot-sweep-timing",
+    name: "Basic Foot Sweep Timing",
+    belt: "white",
+    position: "Takedowns & Standing",
+    category: "Trip / Sweep",
+    shortDescription: "Catch the moment the foot is light and direct the upper body opposite the sweep.",
+    fullStepByStep: [
+      "Establish sleeve-and-collar or collar-and-elbow control so you can steer posture in two directions.",
+      "Move your partner in a small circle until you feel one foot become light as it prepares to step.",
+      "Sweep that foot with your instep while your grips pull and rotate their shoulders the opposite way.",
+      "Follow immediately to top position, keeping your chest over hips so they cannot scramble back up."
+    ],
+    tips: ["The sweep works on timing, not power.", "Think pull, turn, and reap in one beat."],
+    commonMistakes: ["Trying to kick a planted heavy leg.", "Leaning backward during the sweep attempt."],
+    youtubeUrl: LINKS.standupBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-stand-clinch-body-lock",
+    name: "Body Lock Entry from Clinch",
+    belt: "white",
+    position: "Takedowns & Standing",
+    category: "Control",
+    shortDescription: "Close distance safely and secure tight midline control for easy finishes.",
+    fullStepByStep: [
+      "Win inside arm position and step chest-to-chest so there is no striking distance or easy re-shot lane.",
+      "Connect your hands behind the lower back with elbows pinched and your forehead tight under their jawline.",
+      "Step your hips close and off-balance them with short steering steps, never extending your lock away from your body.",
+      "Finish with a simple outside trip or mat return and land in side control."
+    ],
+    tips: ["Head pressure makes the lock feel twice as strong.", "Keep your elbows tight like a seatbelt."],
+    commonMistakes: ["Locking high on the ribs and losing leverage.", "Reaching for the lock before winning inside position."],
+    youtubeUrl: LINKS.standupBase,
+    difficulty: "beginner",
+  },
+
+  // Guard Work (6)
+  {
+    id: "white-guard-closed-control",
+    name: "Closed Guard Posture Control",
+    belt: "white",
+    position: "Guard Work",
+    category: "Control",
+    shortDescription: "Break posture first, then chain attacks with calm control.",
+    fullStepByStep: [
+      "Close your guard high on the back and pull your knees inward so the opponent's posture stays compromised.",
+      "Control one wrist and one collar or head tie, then pull their weight forward onto your hips.",
+      "Angle slightly to one side so your hips are loaded for attacks instead of flat beneath them.",
+      "Use this posture break to transition into sweeps, armbars, or collar attacks."
+    ],
+    tips: ["Guard is strongest when your knees are active.", "Create angle before launching attacks."],
+    commonMistakes: ["Keeping guard low and loose around the waist.", "Trying submissions on a fully postured opponent."],
+    youtubeUrl: LINKS.guardBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-guard-scissor-sweep",
+    name: "Scissor Sweep Fundamentals",
+    belt: "white",
+    position: "Guard Work",
+    category: "Sweep",
+    shortDescription: "Classic white-belt sweep from collar-and-sleeve with sharp angle.",
+    fullStepByStep: [
+      "Break posture and secure cross-collar with one hand and sleeve control with the other.",
+      "Open guard, place your shin across their torso, and load your bottom leg outside their knee like a chopping blade.",
+      "Pull with your grips while cutting the shin across and chopping the leg in opposite directions.",
+      "Follow immediately to mount and stabilize before attacking."
+    ],
+    tips: ["Pull and kick at the same moment.", "Keep your top shin active against their chest."],
+    commonMistakes: ["Trying to sweep with no angle.", "Leaving the sleeve free so they post."],
+    youtubeUrl: LINKS.guardBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-guard-hip-bump-sweep",
+    name: "Hip Bump Sweep",
+    belt: "white",
+    position: "Guard Work",
+    category: "Sweep",
+    shortDescription: "Sit-up sweep that punishes opponents who keep hands posted wide.",
+    fullStepByStep: [
+      "Open guard and sit up quickly, posting one hand behind you and hugging over their shoulder line.",
+      "Trap their far arm or post by controlling triceps so they cannot widen base.",
+      "Drive your hips diagonally into them and rotate over your posted hand to tip them backward.",
+      "Come up to mount with chest pressure and wide knees."
+    ],
+    tips: ["Explode from hips, not shoulders.", "Sit up close so your chest meets theirs."],
+    commonMistakes: ["Sitting up too far away.", "Forgetting to trap the posting hand."],
+    youtubeUrl: LINKS.guardBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-guard-kimura-grip-fight",
+    name: "Kimura Grip from Closed Guard",
+    belt: "white",
+    position: "Guard Work",
+    category: "Submission Setup",
+    shortDescription: "Use grip fighting and angle to isolate shoulder line safely.",
+    fullStepByStep: [
+      "Control their wrist and pin it to your chest while climbing your guard higher on their back.",
+      "Sit up and loop your second arm over their triceps to lock a figure-four grip tight to your body.",
+      "Angle your hips out and keep their elbow bent at ninety degrees while you draw their hand away from center.",
+      "Finish slowly or use the grip to sweep if they posture hard."
+    ],
+    tips: ["Keep the captured elbow away from their ribs.", "Use hip angle to multiply control."],
+    commonMistakes: ["Trying to crank flat on your back.", "Allowing the wrist to float free."],
+    youtubeUrl: LINKS.guardBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-guard-flower-sweep",
+    name: "Flower Sweep",
+    belt: "white",
+    position: "Guard Work",
+    category: "Sweep",
+    shortDescription: "High-percentage pendulum sweep that uses sleeve control and leg momentum.",
+    fullStepByStep: [
+      "Establish deep sleeve grip and opposite pant or ankle control to pin one side of their base.",
+      "Open guard, angle to your sleeve side, and swing your free leg wide like a pendulum.",
+      "As their weight tips, lift with your hooking leg and pull their trapped arm across your center.",
+      "Roll to top and settle with shoulder pressure."
+    ],
+    tips: ["Think pendulum: smooth arc, not a kick.", "Your grips should glue one side of their body."],
+    commonMistakes: ["Trying from flat hips.", "Not controlling the posting arm first."],
+    youtubeUrl: LINKS.guardBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-guard-cross-collar-choke",
+    name: "Cross Collar Choke from Guard",
+    belt: "white",
+    position: "Guard Work",
+    category: "Submission",
+    shortDescription: "Foundational gi choke based on deep grips and elbow line.",
+    fullStepByStep: [
+      "Break posture and feed your first hand deep into the opposite collar, knuckles behind the neck.",
+      "Use your second hand to enter the near collar palm-up and bring both elbows close to your ribs.",
+      "Pull your opponent forward and flare wrists so both forearms form a scissoring pressure around the neck.",
+      "Finish with your back engaged, not by curling only your arms."
+    ],
+    tips: ["First grip depth decides the finish.", "Keep wrists aligned and elbows low."],
+    commonMistakes: ["Shallow collar grips.", "Trying to finish while opponent is postured high."],
+    youtubeUrl: LINKS.guardBase,
+    difficulty: "beginner",
+  },
+
+  // Guard Passing (6)
+  {
+    id: "white-pass-posture-in-closed-guard",
+    name: "Closed Guard Posture and Opening",
+    belt: "white",
+    position: "Guard Passing",
+    category: "Guard Opening",
+    shortDescription: "Build posture first, then open guard with base and pressure.",
+    fullStepByStep: [
+      "Place one hand on the sternum and one on the belt line while keeping your elbows inside.",
+      "Raise your posture tall with hips forward and eyes up so your spine supports pressure.",
+      "Step one foot up, then the second, and use your knee wedge to separate the ankles safely.",
+      "As guard opens, control legs immediately and transition into your pass of choice."
+    ],
+    tips: ["Posture before pressure, always.", "Keep elbows tight to avoid arm attacks."],
+    commonMistakes: ["Trying to open guard while hunched forward.", "Leaving one arm across center too long."],
+    youtubeUrl: LINKS.passBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-pass-knee-slice",
+    name: "Knee Slice Pass",
+    belt: "white",
+    position: "Guard Passing",
+    category: "Pressure Pass",
+    shortDescription: "Classic pass that uses hip line control and shoulder pressure.",
+    fullStepByStep: [
+      "Control inside position with one knee between their legs and your opposite foot posted wide for base.",
+      "Grip far collar or underhook and pin their near knee to the mat to remove shield frames.",
+      "Slice your knee across their thigh while dropping shoulder pressure into their chest and turning hips slightly down.",
+      "Clear your trailing foot, settle chest-to-chest, and establish side control."
+    ],
+    tips: ["Win the underhook battle early.", "Your slicing knee should travel forward, not sideways."],
+    commonMistakes: ["Trying to slide without pinning the near leg.", "Staying too upright and losing pressure."],
+    youtubeUrl: LINKS.passBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-pass-toreando-basics",
+    name: "Toreando Pass Basics",
+    belt: "white",
+    position: "Guard Passing",
+    category: "Movement Pass",
+    shortDescription: "Speed pass that redirects both legs and circles around hip line.",
+    fullStepByStep: [
+      "Grip both pant legs near the knees and keep your elbows tucked for structural control.",
+      "Step diagonally while steering both legs across your center line as if opening a gate.",
+      "Run your feet around their hip line and drop shoulder pressure into chest before they recover guard.",
+      "Secure side control with crossface and near-side underhook."
+    ],
+    tips: ["Move feet first, then settle pressure.", "Keep hips low when you circle around."],
+    commonMistakes: ["Standing too tall and getting lassoed.", "Pausing after redirecting legs."],
+    youtubeUrl: LINKS.passBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-pass-double-under",
+    name: "Double Under Pass",
+    belt: "white",
+    position: "Guard Passing",
+    category: "Stack Pass",
+    shortDescription: "Control both legs and stack safely to pass around the hips.",
+    fullStepByStep: [
+      "Thread both arms under the thighs and clasp hands around the hips so legs are pinned.",
+      "Lift and stack your partner by driving shoulder pressure into their stomach while keeping head tight.",
+      "Walk around to one side in small steps while maintaining leg control to prevent inversion.",
+      "Drop your hips low as you clear legs and stabilize side control."
+    ],
+    tips: ["Keep your elbows glued to their hips.", "Use steps and angle, not brute force."],
+    commonMistakes: ["Letting knees flare open during stack.", "Trying to sprint around too early."],
+    youtubeUrl: LINKS.passBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-pass-over-under",
+    name: "Over-Under Pass",
+    belt: "white",
+    position: "Guard Passing",
+    category: "Pressure Pass",
+    shortDescription: "Pin one leg over shoulder and one under arm to freeze guard movement.",
+    fullStepByStep: [
+      "Trap one leg over your shoulder and underhook the opposite leg so both hips are misaligned.",
+      "Drop your chest low and connect your ear to their torso to remove space.",
+      "Walk toward the trapped-over-shoulder side, clearing their knee line before turning the corner.",
+      "Finish with heavy chest pressure and controlled hip pin."
+    ],
+    tips: ["Head position keeps hips pinned.", "Walk slowly and never give knee space back."],
+    commonMistakes: ["Staying too high and getting re-guarded.", "Trying to force pass without controlling far leg."],
+    youtubeUrl: LINKS.passBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-pass-leg-drag-intro",
+    name: "Leg Drag Introduction",
+    belt: "white",
+    position: "Guard Passing",
+    category: "Control Pass",
+    shortDescription: "Drag one leg across center and staple hips before sliding through.",
+    fullStepByStep: [
+      "Control ankle and knee, then drag one leg across your center line so their hips turn away.",
+      "Step your near knee beside their trapped thigh to staple movement while your far leg posts for base.",
+      "Crossface and underhook to pin upper body and stop spinning escape attempts.",
+      "Slide chest forward and settle in side control with tight hip connection."
+    ],
+    tips: ["Turn their hips first, then pin shoulders.", "A strong staple knee prevents guard recovery."],
+    commonMistakes: ["Dragging leg but leaving hips square.", "Ignoring upper body control after drag."],
+    youtubeUrl: LINKS.passBase,
+    difficulty: "beginner",
+  },
+
+  // Side Control (6)
+  {
+    id: "white-side-crossface-underhook",
+    name: "Crossface and Underhook Control",
+    belt: "white",
+    position: "Side Control",
+    category: "Pinning",
+    shortDescription: "Build true side control with shoulder pressure and hip blocking.",
+    fullStepByStep: [
+      "Place your crossface shoulder under their jawline and turn their face away from you.",
+      "Thread your far-side underhook deep and glue your elbow to their back.",
+      "Sprawl your hips low with knees wide so their near elbow cannot re-enter inside space.",
+      "Adjust weight toward chest and hips in rhythm to stay heavy without overcommitting."
+    ],
+    tips: ["Head direction controls the escape direction.", "Shoulder pressure should feel steady, not jerky."],
+    commonMistakes: ["Resting weight on knees instead of torso.", "Leaving underhook shallow and loose."],
+    youtubeUrl: LINKS.sideBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-side-kesa-gatame-hold",
+    name: "Kesa Gatame Hold Basics",
+    belt: "white",
+    position: "Side Control",
+    category: "Pinning Variation",
+    shortDescription: "Use scarf hold to pin upper body and isolate near arm.",
+    fullStepByStep: [
+      "Sit near their shoulder with your near arm wrapping head and your far arm controlling near triceps.",
+      "Drop your hip to the mat close to their ribs while extending your far leg for base.",
+      "Keep your chest angled slightly toward their head so they cannot easily turn into you.",
+      "When they bridge, post your free hand and reset chest pressure before attacking."
+    ],
+    tips: ["Stay close to shoulder line, not hips.", "Your far leg acts as a kickstand."],
+    commonMistakes: ["Sitting too high by the neck and losing base.", "Leaning backward during bridges."],
+    youtubeUrl: LINKS.sideBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-side-knee-on-belly-entry",
+    name: "Knee-on-Belly Entry",
+    belt: "white",
+    position: "Side Control",
+    category: "Transition",
+    shortDescription: "Transition to mobile control and create reactions for submissions.",
+    fullStepByStep: [
+      "From side control, post one hand on mat and one on collar or shoulder for balance.",
+      "Slide your near knee across their stomach with toes active and shin angled through center.",
+      "Keep your weight centered over your posting points, not dumped through the knee alone.",
+      "Use their push reaction to transition back to side control or into mount."
+    ],
+    tips: ["Float your weight, do not spike it.", "Hands and toes are your balance tripod."],
+    commonMistakes: ["Leaning too far forward and getting rolled.", "Placing knee too low near hips."],
+    youtubeUrl: LINKS.sideBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-side-far-arm-isolation",
+    name: "Far-Side Arm Isolation",
+    belt: "white",
+    position: "Side Control",
+    category: "Control to Attack",
+    shortDescription: "Isolate the far arm to open kimura, americana, and armbar chains.",
+    fullStepByStep: [
+      "Maintain crossface while walking your underhook shoulder deeper under their far scapula.",
+      "Use your free hand to peel their far wrist from their body and pin it to the mat.",
+      "Switch your hips slightly to keep chest pressure while isolating the elbow from their ribs.",
+      "Transition into submission grip only after the elbow is clearly detached."
+    ],
+    tips: ["Isolate elbow first, wrist second.", "Keep chest pressure during hand fighting."],
+    commonMistakes: ["Chasing wrist with loose chest connection.", "Allowing opponent to turn into turtle."],
+    youtubeUrl: LINKS.sideBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-side-hip-switch-control",
+    name: "Hip Switch to Reverse Side Control",
+    belt: "white",
+    position: "Side Control",
+    category: "Transition",
+    shortDescription: "Switch hips to shut down frames and reset pressure.",
+    fullStepByStep: [
+      "When your opponent frames hard against your neck, windshield-wiper your hips to face their legs.",
+      "Pin their near arm with your hip line while your chest tracks their torso.",
+      "Keep one arm controlling near hip to prevent guard recovery as you settle reverse side control.",
+      "Switch back to standard side control once their frame collapses."
+    ],
+    tips: ["Hip switch is a pressure reset, not a scramble.", "Stay connected through the transition."],
+    commonMistakes: ["Switching hips with too much space.", "Forgetting to block near hip during switch."],
+    youtubeUrl: LINKS.sideBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-side-guard-recovery-denial",
+    name: "Guard Recovery Denial from Side Control",
+    belt: "white",
+    position: "Side Control",
+    category: "Retention",
+    shortDescription: "Block knee insertions and maintain top pressure when opponent shrimps.",
+    fullStepByStep: [
+      "As they shrimp, track their near knee with your elbow and hip so it cannot thread inside.",
+      "Step your near leg back and drop your hip line to smother the recovering frame.",
+      "Re-apply crossface and underhook as soon as their movement slows.",
+      "Advance to knee-on-belly or mount when control is stable."
+    ],
+    tips: ["Follow knees with your hips, not your hands.", "Rebuild chest control after every defensive burst."],
+    commonMistakes: ["Reaching for legs and losing upper-body pin.", "Staying static while opponent keeps moving."],
+    youtubeUrl: LINKS.sideBase,
+    difficulty: "beginner",
+  },
+
+  // Mount (6)
+  {
+    id: "white-mount-low-control",
+    name: "Low Mount Control",
+    belt: "white",
+    position: "Mount",
+    category: "Pinning",
+    shortDescription: "Stabilize against bridges by dropping hips and widening base.",
+    fullStepByStep: [
+      "Sit heavy over hips with knees pinched and feet tucked near their hips for base.",
+      "Post your hands lightly on mat or chest and keep your head over their center line.",
+      "When they bridge, post opposite hand and foot while keeping hips connected.",
+      "Return to center and re-establish chest pressure before attacking."
+    ],
+    tips: ["Balance over center, not too high.", "Ride movement instead of resisting every bridge."],
+    commonMistakes: ["Leaning forward and getting rolled.", "Squeezing with legs only and losing posture."],
+    youtubeUrl: LINKS.mountBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-mount-high-mount-climb",
+    name: "High Mount Climb",
+    belt: "white",
+    position: "Mount",
+    category: "Transition",
+    shortDescription: "Climb above elbows to remove defensive frames and open submissions.",
+    fullStepByStep: [
+      "Walk your knees up toward armpits while controlling wrists so elbows stay separated from torso.",
+      "Slide one knee high under shoulder line and keep hips low to avoid being bridged off.",
+      "Pinch knees inward and keep heels tight as you settle above their chest.",
+      "Use high mount to attack armbars and cross-collar chokes with reduced risk."
+    ],
+    tips: ["Climb when their elbows are wide.", "Move one knee at a time with balance."],
+    commonMistakes: ["Rushing high mount and falling forward.", "Allowing elbows back inside during climb."],
+    youtubeUrl: LINKS.mountBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-mount-americana",
+    name: "Americana from Mount",
+    belt: "white",
+    position: "Mount",
+    category: "Submission",
+    shortDescription: "Pin and paintbrush shoulder lock from a stable top mount.",
+    fullStepByStep: [
+      "Pin one wrist to the mat with palm down and keep elbow bent at ninety degrees.",
+      "Thread your second arm under their triceps and grab your own wrist to create a figure-four grip.",
+      "Slide the pinned hand down toward their hip while lifting elbow in a paintbrush arc.",
+      "Apply pressure slowly and keep chest weight heavy to prevent escapes."
+    ],
+    tips: ["Keep their wrist glued to mat.", "Move elbow and hand together in tight arc."],
+    commonMistakes: ["Lifting wrist off floor.", "Trying to finish with arms while hips are light."],
+    youtubeUrl: LINKS.mountBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-mount-cross-collar",
+    name: "Cross Collar Choke from Mount",
+    belt: "white",
+    position: "Mount",
+    category: "Submission",
+    shortDescription: "Secure deep collar grips and finish with elbow line and chest expansion.",
+    fullStepByStep: [
+      "Open one collar and feed your first hand deep, knuckles behind neck line.",
+      "Use your second hand to enter opposite collar while keeping elbows tucked near ribs.",
+      "Drop your head low to keep posture pressure and pull elbows toward your hips.",
+      "Finish by engaging back muscles and squeezing forearms around carotid lines."
+    ],
+    tips: ["Deep first grip makes second grip easy.", "Head low keeps them pinned."],
+    commonMistakes: ["Staying upright while setting grips.", "Crossing wrists awkwardly with shallow grips."],
+    youtubeUrl: LINKS.mountBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-mount-armbar",
+    name: "S-Mount Armbar Basics",
+    belt: "white",
+    position: "Mount",
+    category: "Submission",
+    shortDescription: "Isolate arm from high mount and finish with controlled hip extension.",
+    fullStepByStep: [
+      "From high mount, pin one wrist and slide opposite knee near their ear to limit movement.",
+      "Step your second leg around their head and sit to S-mount with knees squeezing inward.",
+      "Fall to controlled side while trapping thumb-up arm line to your chest.",
+      "Pinch knees and lift hips gently to finish."
+    ],
+    tips: ["Control elbow line before falling back.", "Keep heels heavy to stop escapes."],
+    commonMistakes: ["Falling back with loose arm control.", "Crossing legs and losing pressure."],
+    youtubeUrl: LINKS.mountBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-mount-upa-counter-post",
+    name: "Countering Upa from Mount",
+    belt: "white",
+    position: "Mount",
+    category: "Retention",
+    shortDescription: "Read bridge direction and post correctly without giving position away.",
+    fullStepByStep: [
+      "Feel which side they trap and bridge toward by monitoring shoulder and hip load.",
+      "Post opposite hand and same-side foot in a wide base as bridge starts, not after.",
+      "Keep hips low and slightly forward so their momentum dissolves under your weight.",
+      "Re-center and attack once their bridge cycle ends."
+    ],
+    tips: ["Early post beats big post.", "Stay calm and surf the bridge."],
+    commonMistakes: ["Posting with trapped hand.", "Letting hips lift during bridge defense."],
+    youtubeUrl: LINKS.mountBase,
+    difficulty: "beginner",
+  },
+
+  // Back / Rear Mount (6)
   {
     id: "white-back-seatbelt-control",
     name: "Seatbelt Retention from Rear Mount",
-    belt: "White",
-    stripes: 1,
+    belt: "white",
     position: "Back / Rear Mount",
-    shortDescription: "Lock safe chest-to-back pressure and stop shoulder escapes before they start.",
+    category: "Control",
+    shortDescription: "Lock chest-to-back pressure and prevent shoulder escapes.",
     fullStepByStep: [
-      "Place your choking arm over the shoulder and your secondary arm under the armpit, connecting palm-to-palm at the sternum so your elbows pinch inward.",
-      "Glue your chest to your partner's upper back and keep your head close to the side of your choking arm to deny turning room.",
-      "Slide your top hook deep across the thigh while your bottom hook blocks their hip line, then flex your heels to keep their hips captured.",
-      "If they scoot their shoulders down, walk your hips higher and keep your seatbelt tight before attempting any choke.",
-      "Settle your breathing and apply steady pressure rather than squeezing hard; control always comes before submission."
+      "Connect over-under seatbelt tight at sternum with elbows pinched.",
+      "Keep your head near choking-arm side and chest glued to upper back.",
+      "Set hooks deep and use heel tension to control hip line.",
+      "Prioritize control and hand fighting before any choke attempt."
     ],
-    tips: [
-      "Think chest connected, elbows tight, hips active.",
-      "Use your head position as a third hand to block their turn."
-    ],
-    commonMistakes: [
-      "Reaching too far for a choke and losing top shoulder control.",
-      "Crossing ankles in front of the hips while they still have escape power."
-    ],
-    youtubeUrl: "https://www.youtube.com/watch?v=V6LFkdeSox0",
-    difficulty: "Fundamental"
+    tips: ["Chest connection is king.", "Elbows tight make seatbelt unbreakable."],
+    commonMistakes: ["Opening grips too early.", "Crossing ankles in front of hips."],
+    youtubeUrl: LINKS.backBase,
+    difficulty: "beginner",
   },
   {
     id: "white-back-rnc-finish",
     name: "Rear Naked Choke Fundamentals",
-    belt: "White",
-    stripes: 1,
+    belt: "white",
     position: "Back / Rear Mount",
-    shortDescription: "Classic blood choke from strong back control with clean hand positioning.",
+    category: "Submission",
+    shortDescription: "High-percentage finish using clean forearm position and head control.",
     fullStepByStep: [
-      "Build your seatbelt and use your non-choking hand to hide behind their head, keeping your elbows close to your ribs.",
-      "Slide your choking forearm under the chin with the blade of the forearm, not the wrist, and keep your shoulder tight to the back of their head.",
-      "Place your choking hand behind your opposite biceps and then place your support hand behind their head, palm touching your own skull.",
-      "Expand your chest, squeeze elbows together, and imagine pulling your choking elbow toward your own hip to close both carotid arteries.",
-      "Hold controlled pressure and release immediately if your partner taps."
+      "Hide choking hand first while controlling wrist fight with support hand.",
+      "Slide forearm under chin and connect choking hand to opposite biceps.",
+      "Place support hand behind their head and pull elbows inward.",
+      "Expand chest and draw choking elbow down for controlled finish."
     ],
-    tips: [
-      "Hide your choking hand before you attack.",
-      "Finish with posture and elbow line, not arm strength."
-    ],
-    commonMistakes: [
-      "Trying to finish across the face with loose head control.",
-      "Opening the seatbelt too early and letting the opponent turn."
-    ],
-    youtubeUrl: "https://www.youtube.com/watch?v=6Qy6mBfS0xY",
-    difficulty: "Fundamental"
-  },
-  {
-    id: "white-back-bow-arrow-entry",
-    name: "Bow-and-Arrow Setup from Back",
-    belt: "White",
-    stripes: 2,
-    position: "Back / Rear Mount",
-    shortDescription: "Use collar control and angle change to create a high-percentage gi finish.",
-    fullStepByStep: [
-      "From rear mount, open your partner's near collar with your support hand and feed a deep thumb-in grip to your choking hand.",
-      "Keep your chest connected as you slide your support hand to grab their far pant leg near the knee.",
-      "Fall to your choking-arm side while maintaining your collar grip and pull the pant leg away to stretch their frame.",
-      "Draw your collar-gripping elbow backward as your leg extends to increase rotational pressure across the neck.",
-      "Maintain clean control and release immediately on the tap."
-    ],
-    tips: [
-      "Make your first collar grip as deep as possible.",
-      "The leg extension creates the finish angle; do not rush it."
-    ],
-    commonMistakes: [
-      "Leaning backward without controlling the pant leg.",
-      "Using a shallow collar grip that slips under pressure."
-    ],
-    youtubeUrl: "https://www.youtube.com/watch?v=R8QmJXn7Q5E",
-    difficulty: "Intermediate"
-  },
-  {
-    id: "white-back-trap-arm-rnc",
-    name: "Trap Arm to Rear Naked Choke",
-    belt: "White",
-    stripes: 2,
-    position: "Back / Rear Mount",
-    shortDescription: "Isolate one defensive hand first, then finish when the neck opens naturally.",
-    fullStepByStep: [
-      "Secure rear mount with seatbelt and identify which hand is actively protecting the neck.",
-      "Use your underhook-side hand to pin that wrist to their chest while your hook-side leg pinches over the arm.",
-      "Shift your chest pressure forward so the trapped arm cannot peel your choking hand away.",
-      "Slide your choking arm under the chin and lock your RNC grip while the trapped arm remains pinned.",
-      "Apply controlled finishing pressure and monitor your partner's safety response."
-    ],
-    tips: [
-      "Arm isolation creates calm, high-confidence choke entries.",
-      "Trap first, finish second."
-    ],
-    commonMistakes: [
-      "Attempting to trap with loose hooks and sliding off the back.",
-      "Forgetting to keep shoulder pressure while switching grips."
-    ],
-    youtubeUrl: "https://www.youtube.com/watch?v=9D2r2QdMJ8Q",
-    difficulty: "Intermediate"
-  },
-  {
-    id: "white-back-body-triangle-control",
-    name: "Body Triangle Control Principles",
-    belt: "White",
-    stripes: 3,
-    position: "Back / Rear Mount",
-    shortDescription: "Transition from hooks to body triangle for tighter hip control and slower escapes.",
-    fullStepByStep: [
-      "From secure back control, bring one foot across the opponent's stomach while maintaining chest connection.",
-      "Thread your opposite foot behind the knee of the crossing leg and lock a body triangle on the safe side of their torso.",
-      "Squeeze your knees slightly inward while keeping hips mobile so they cannot rotate into you.",
-      "Use your top shoulder to pressure behind their head and prevent turning toward your lock side.",
-      "Adjust your lock if needed, keeping your feet active and never sacrificing upper-body control."
-    ],
-    tips: [
-      "Lock to the side that limits their strongest escape direction.",
-      "Use gradual pressure; your triangle is for control, not pain."
-    ],
-    commonMistakes: [
-      "Crossing ankles instead of locking a true triangle.",
-      "Focusing on leg squeeze while losing seatbelt tension."
-    ],
-    youtubeUrl: "https://www.youtube.com/watch?v=Q4v8Vg0eR6E",
-    difficulty: "Intermediate"
+    tips: ["Hide then strike.", "Finish with structure, not force."],
+    commonMistakes: ["Cranking over jaw with no control.", "Losing hook pressure during attack."],
+    youtubeUrl: LINKS.backBase,
+    difficulty: "beginner",
   },
   {
     id: "white-back-short-choke",
-    name: "Short Choke from Rear Mount",
-    belt: "White",
-    stripes: 3,
+    name: "Short Choke from Back",
+    belt: "white",
     position: "Back / Rear Mount",
-    shortDescription: "Compact choke when the opponent tucks the chin and hides neck space.",
+    category: "Submission",
+    shortDescription: "Compact alternative when chin defense blocks full RNC entry.",
     fullStepByStep: [
-      "Start from seatbelt and hide your choking hand beside their jawline rather than reaching deep under the chin.",
-      "Cup your support hand behind their head and keep your choking elbow tight to your rib cage.",
-      "Rotate your choking forearm so the blade compresses one side of the neck as your biceps close the other side.",
-      "Pull your support-side elbow backward while lifting your chest to tighten the finishing wedge.",
-      "Hold steady pressure for one to two seconds, then release on tap."
+      "Keep seatbelt and place choking forearm blade near one carotid side.",
+      "Cup your support hand behind opponent's head to block posture.",
+      "Compress elbows inward while lifting chest and rotating forearm angle.",
+      "Finish calmly and release immediately on tap."
     ],
-    tips: [
-      "Great option when full RNC depth is unavailable.",
-      "Stay compact and avoid overextension."
-    ],
-    commonMistakes: [
-      "Trying to muscle through the chin with wrist pressure.",
-      "Letting your support hand drift away from head control."
-    ],
-    youtubeUrl: "https://www.youtube.com/watch?v=YVj3YhWJf4Q",
-    difficulty: "Intermediate"
+    tips: ["Stay compact.", "Do not chase deep grip if short choke is open."],
+    commonMistakes: ["Overextending for deep grip.", "Losing head control with support hand."],
+    youtubeUrl: LINKS.backBase,
+    difficulty: "beginner",
   },
   {
-    id: "white-back-rear-triangle",
-    name: "Rear Triangle Entry",
-    belt: "White",
-    stripes: 4,
+    id: "white-back-bow-and-arrow",
+    name: "Bow-and-Arrow Choke Basics",
+    belt: "white",
     position: "Back / Rear Mount",
-    shortDescription: "Transition to a rear triangle when your opponent over-defends hand fighting.",
+    category: "Submission",
+    shortDescription: "Gi back attack using deep collar and leg extension mechanics.",
     fullStepByStep: [
-      "From back control, isolate one arm so their shoulder line turns slightly away from your lock side.",
-      "Bring your top leg high across their shoulder and neck line while controlling posture with your hands.",
-      "Thread your bottom leg over your own ankle and pivot your hips to lock a triangle around neck and trapped arm.",
-      "Squeeze knees inward and angle your hips so your hamstring and calf compress both sides of the neck.",
-      "Use controlled pressure and stabilize before adding arm attacks."
+      "Establish deep thumb-in collar grip while maintaining back connection.",
+      "Grab far pant leg and fall to choking side without losing chest alignment.",
+      "Extend leg and pull collar elbow back to stretch frame and tighten choke.",
+      "Control finish line and release on tap."
     ],
-    tips: [
-      "Hip angle matters more than leg strength.",
-      "Trap an arm whenever possible to increase choke efficiency."
-    ],
-    commonMistakes: [
-      "Locking low on the shoulders instead of the neck line.",
-      "Rushing the transition and losing back position entirely."
-    ],
-    youtubeUrl: "https://www.youtube.com/watch?v=SqRz8RJ5vT8",
-    difficulty: "Advanced"
+    tips: ["Collar depth matters most.", "Use angle and extension together."],
+    commonMistakes: ["Falling flat with no pant control.", "Trying finish from shallow collar grip."],
+    youtubeUrl: LINKS.backBase,
+    difficulty: "beginner",
   },
   {
-    id: "white-back-escape-counter-hip-switch",
-    name: "Counter to Back Escape Hip Switch",
-    belt: "White",
-    stripes: 4,
+    id: "white-back-body-triangle",
+    name: "Body Triangle Control",
+    belt: "white",
     position: "Back / Rear Mount",
-    shortDescription: "Follow and recover when opponent tries to drop hips to one side and slide out.",
+    category: "Control",
+    shortDescription: "Switch hooks to body triangle for powerful hip containment.",
     fullStepByStep: [
-      "When the opponent drops toward one hip, keep your seatbelt connected and switch your hook priority to block that hip line.",
-      "Walk your upper body slightly higher on their shoulders to keep chest pressure where escape space is opening.",
-      "Use your free leg to pummel back inside and recover your second hook before attacking.",
-      "If they continue rotating, transition briefly to body triangle to slow movement and reset control.",
-      "Return to stable rear mount and re-establish hand-fighting dominance."
+      "Bring one leg across abdomen while preserving seatbelt pressure.",
+      "Thread opposite foot behind knee and lock triangle on safe side.",
+      "Pinch knees and keep hips active to follow rotation attempts.",
+      "Use control to win hand fighting and set safe submissions."
     ],
-    tips: [
-      "Recover position first; submission attempts come second.",
-      "Your hooks should react to their hip movement, not stay static."
-    ],
-    commonMistakes: [
-      "Holding one hook stubbornly while opponent rotates free.",
-      "Ignoring hand fighting while focusing only on leg recovery."
-    ],
-    youtubeUrl: "https://www.youtube.com/watch?v=2Qb8fYwT6rM",
-    difficulty: "Fundamental"
+    tips: ["Triangle is for control, not pain.", "Always keep upper-body connection."],
+    commonMistakes: ["Forgetting head control during lock transition.", "Locking on wrong side and losing angle."],
+    youtubeUrl: LINKS.backBase,
+    difficulty: "beginner",
   },
   {
-    id: "white-back-collar-choke-one-arm",
-    name: "One-Arm Collar Choke from Back",
-    belt: "White",
-    stripes: 4,
+    id: "white-back-trap-arm-rnc",
+    name: "Trap Arm to RNC",
+    belt: "white",
     position: "Back / Rear Mount",
-    shortDescription: "Gi-specific choke using deep lapel feed and shoulder pressure with minimal hand switching.",
+    category: "Submission Chain",
+    shortDescription: "Immobilize one defense hand before finishing choke.",
     fullStepByStep: [
-      "From back control in the gi, feed your choking hand deep into the far collar, palm down, thumb hidden.",
-      "Use your support hand to control the wrist of their top defense hand so they cannot strip grips quickly.",
-      "Drive your choking-side shoulder forward and pull your gripping elbow down toward your hip pocket.",
-      "Maintain tight chest-to-back contact while your forearm blade compresses one side of the neck.",
-      "Apply pressure smoothly and stop immediately on tap."
+      "Identify defending hand and pin wrist with underhook-side hand.",
+      "Use your hook-side leg to trap arm against torso while chest stays glued.",
+      "Slide choking arm under chin and lock RNC mechanics.",
+      "Apply controlled finishing pressure with trapped arm neutralized."
     ],
-    tips: [
-      "Grip depth determines finish quality.",
-      "Shoulder pressure multiplies choke efficiency."
+    tips: ["Trap first, finish second.", "Keep pressure forward so trap stays secure."],
+    commonMistakes: ["Loose leg trap.", "Attempting choke before arm is isolated."],
+    youtubeUrl: LINKS.backBase,
+    difficulty: "beginner",
+  },
+
+  // Turtle & Leg Entanglements (6)
+  {
+    id: "white-turtle-seatbelt-breakdown",
+    name: "Seatbelt Breakdown from Turtle",
+    belt: "white",
+    position: "Turtle & Leg Entanglements",
+    category: "Control",
+    shortDescription: "Use seatbelt and angle to flatten turtle safely.",
+    fullStepByStep: [
+      "Secure one arm over shoulder and one under armpit while chest stays connected.",
+      "Step to angle beside hip and pull shoulder line backward while driving chest forward.",
+      "Break their base to near hip and settle top pressure before attacking.",
+      "Transition to back control if they expose hooks."
     ],
-    commonMistakes: [
-      "Using a shallow collar grip that slides out.",
-      "Leaning backward and sacrificing control."
-    ],
-    youtubeUrl: "https://www.youtube.com/watch?v=rkNf8m9Yy7M",
-    difficulty: "Intermediate"
+    tips: ["Angle before force.", "Keep your chest heavy throughout breakdown."],
+    commonMistakes: ["Pulling straight backward with no angle.", "Leaving hips far away from turtle."],
+    youtubeUrl: LINKS.turtleBase,
+    difficulty: "beginner",
   },
   {
-    id: "white-back-transition-armbar",
-    name: "Back to Armbar Transition",
-    belt: "White",
-    stripes: 4,
-    position: "Back / Rear Mount",
-    shortDescription: "Switch from rear mount to armbar when choke defense over-commits both hands.",
+    id: "white-turtle-clock-choke-entry",
+    name: "Clock Choke Entry",
+    belt: "white",
+    position: "Turtle & Leg Entanglements",
+    category: "Submission",
+    shortDescription: "Gi turtle attack using deep collar and rotational walk.",
     fullStepByStep: [
-      "Force hand fighting from back control until your opponent commits both hands to defend the neck.",
-      "Control one wrist with two hands and place your top leg over their shoulder while keeping chest connection.",
-      "Pivot your hips off to the side, bringing your second leg across the face line to control posture.",
-      "Pinch knees, keep thumb pointing up, and pull the arm to your chest before extending hips gently.",
-      "Finish with controlled extension and immediate release on tap."
+      "Insert deep collar grip near neck with knuckles firm and elbow tight.",
+      "Control near hip or far pant to block defensive turn-in.",
+      "Walk your legs around head side in a clock motion while dropping shoulder pressure.",
+      "Stop when choke pressure peaks and release on tap."
     ],
-    tips: [
-      "Keep their elbow line trapped before falling back.",
-      "A calm pivot beats a fast scramble."
+    tips: ["Deep collar first.", "Walk smooth and tight, not wide."],
+    commonMistakes: ["Shallow grip and no choke pressure.", "Walking too far and losing control."],
+    youtubeUrl: LINKS.turtleBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-turtle-spiral-ride",
+    name: "Spiral Ride Control",
+    belt: "white",
+    position: "Turtle & Leg Entanglements",
+    category: "Control",
+    shortDescription: "Break turtle posture and expose back with spiral pressure.",
+    fullStepByStep: [
+      "Control near wrist and far hip while your chest stays over shoulder blades.",
+      "Drive shoulder pressure diagonally forward as your hips circle behind.",
+      "Use spiral tension to force elbows wide and create hook entry lane.",
+      "Insert first hook only when their base has clearly collapsed."
     ],
-    commonMistakes: [
-      "Dropping back before controlling the wrist and elbow.",
-      "Leaving space so opponent turns and stacks."
+    tips: ["Shoulder pressure sets the spiral.", "Hips follow hands, not the reverse."],
+    commonMistakes: ["Reaching hooks before posture breaks.", "Losing wrist control during circle."],
+    youtubeUrl: LINKS.turtleBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-leg-single-leg-x-entry",
+    name: "Single-Leg X Intro Entry",
+    belt: "white",
+    position: "Turtle & Leg Entanglements",
+    category: "Leg Entanglement",
+    shortDescription: "Foundational leg entanglement for sweeps and stand-ups.",
+    fullStepByStep: [
+      "From open guard, capture one ankle and place outside foot on hip line.",
+      "Thread your inside leg under their thigh and clamp knees to isolate leg.",
+      "Sit to angle while controlling heel line and lifting with your inside hook.",
+      "Off-balance them backward or stand up into top position."
     ],
-    youtubeUrl: "https://www.youtube.com/watch?v=YH7m2K9xvA0",
-    difficulty: "Advanced"
-  }
+    tips: ["Keep hips under their center.", "Clamp knees so leg cannot slip free."],
+    commonMistakes: ["Loose knee pinch.", "Trying to sweep while flat on back."],
+    youtubeUrl: LINKS.turtleBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-leg-ashi-garami-control",
+    name: "Straight Ashi Garami Control",
+    belt: "white",
+    position: "Turtle & Leg Entanglements",
+    category: "Leg Entanglement",
+    shortDescription: "Control-first leg position to off-balance and stand.",
+    fullStepByStep: [
+      "Secure one leg between your hips and wrap your outside leg over their thigh.",
+      "Triangle your feet lightly or pinch knees to keep knee line trapped.",
+      "Control heel and ankle while you sit to dominant angle.",
+      "Use push-pull off-balance to sweep or technical stand-up on top."
+    ],
+    tips: ["Control knee line before any attack.", "Use feet as clamps, not hooks alone."],
+    commonMistakes: ["Crossing feet loosely.", "Ignoring upper-body posture while entangled."],
+    youtubeUrl: LINKS.turtleBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-turtle-front-headlock-spin",
+    name: "Front Headlock Spin to Back",
+    belt: "white",
+    position: "Turtle & Leg Entanglements",
+    category: "Back Take",
+    shortDescription: "Convert front headlock control into clean back exposure.",
+    fullStepByStep: [
+      "Secure chin-and-triceps style front headlock with elbows tight.",
+      "Sprawl hips back to break their posture and stop shots.",
+      "Circle to far side while pulling head and steering triceps inward.",
+      "Insert hook and seatbelt once their back opens."
+    ],
+    tips: ["Sprawl before spin.", "Head control determines their direction."],
+    commonMistakes: ["Circling with no hip pressure.", "Releasing triceps too early."],
+    youtubeUrl: LINKS.turtleBase,
+    difficulty: "beginner",
+  },
+
+  // Submissions (6)
+  {
+    id: "white-sub-armbar-guard",
+    name: "Armbar from Closed Guard",
+    belt: "white",
+    position: "Submissions",
+    category: "Armbar",
+    shortDescription: "Break posture, isolate arm, and finish with clean hip line.",
+    fullStepByStep: [
+      "Control one wrist and opposite triceps while pulling posture forward.",
+      "Climb your leg high on shoulder and pivot hips to angle out.",
+      "Swing second leg across face, pinch knees, and keep thumb up alignment.",
+      "Lift hips gently while pulling elbow line to finish."
+    ],
+    tips: ["Angle first, then leg swing.", "Pin knees to stop stack pressure."],
+    commonMistakes: ["Trying armbar straight-on with flat hips.", "Loose leg over head."],
+    youtubeUrl: LINKS.subBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-sub-triangle-guard",
+    name: "Triangle Choke Fundamentals",
+    belt: "white",
+    position: "Submissions",
+    category: "Triangle",
+    shortDescription: "Classic guard choke using posture break and hip angle.",
+    fullStepByStep: [
+      "Control wrist and head posture to make opponent lean forward.",
+      "Shoot one leg over neck and clamp opposite leg over shin line.",
+      "Angle your hips off center and lock figure-four behind knee.",
+      "Pull head and squeeze knees while lifting hips for finish."
+    ],
+    tips: ["Cut angle before squeezing.", "Lock over shin, not over foot."],
+    commonMistakes: ["Staying square under opponent.", "Loose top leg with no clamp."],
+    youtubeUrl: LINKS.subBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-sub-kimura-side-control",
+    name: "Kimura from Side Control",
+    belt: "white",
+    position: "Submissions",
+    category: "Kimura",
+    shortDescription: "Powerful shoulder lock from top with chest pressure and figure-four grip.",
+    fullStepByStep: [
+      "Pin near wrist to mat and thread your second arm under triceps.",
+      "Lock figure-four grip and keep elbows close to your chest.",
+      "Walk your hips toward head side while lifting elbow from mat.",
+      "Rotate hand behind back in controlled arc for finish."
+    ],
+    tips: ["Keep wrist pinned first.", "Use body angle, not arm curl."],
+    commonMistakes: ["Trying to finish with no chest pressure.", "Letting elbow drift back to ribs."],
+    youtubeUrl: LINKS.subBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-sub-guillotine-basic",
+    name: "Basic Guillotine from Front Headlock",
+    belt: "white",
+    position: "Submissions",
+    category: "Guillotine",
+    shortDescription: "Neck attack when opponent shoots with exposed head position.",
+    fullStepByStep: [
+      "Wrap neck with choking arm high and connect your wrist to your ribs.",
+      "Secure support grip and raise choking elbow while keeping head tight.",
+      "Sit to guard or stay standing with hips back to deny takedown completion.",
+      "Apply upward forearm pressure and controlled chest lift for tap."
+    ],
+    tips: ["High wrist line is crucial.", "Hips back protect your base."],
+    commonMistakes: ["Gripping too low on neck.", "Falling backward without control."],
+    youtubeUrl: LINKS.subBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-sub-ezekiel-mount",
+    name: "Ezekiel Choke from Mount",
+    belt: "white",
+    position: "Submissions",
+    category: "Choke",
+    shortDescription: "Sleeve-assisted choke from a stable mount position.",
+    fullStepByStep: [
+      "From mount, feed one hand into your opposite sleeve to build blade-like frame.",
+      "Place forearm across neck while second hand slides behind head to complete scissor line.",
+      "Drop elbows and chest pressure together so neck compression tightens evenly.",
+      "Hold controlled pressure and release on tap."
+    ],
+    tips: ["Secure sleeve grip deeply.", "Mount stability comes before choke pressure."],
+    commonMistakes: ["Attempting from unstable high posture.", "Forearm placement too high on face."],
+    youtubeUrl: LINKS.subBase,
+    difficulty: "beginner",
+  },
+  {
+    id: "white-sub-baseball-bat-basic",
+    name: "Baseball Bat Choke Basics",
+    belt: "white",
+    position: "Submissions",
+    category: "Gi Choke",
+    shortDescription: "Cross-grip gi choke that punishes forward pressure.",
+    fullStepByStep: [
+      "Set first palm-up collar grip deep with forearm across neck.",
+      "Place second palm-down grip on opposite collar like holding a bat.",
+      "Rotate around head side as you drop shoulder and align forearms as cutting blades.",
+      "Finish when collar tension compresses both sides of neck."
+    ],
+    tips: ["Grip depth makes timing forgiving.", "Turn your body as one unit."],
+    commonMistakes: ["Shallow second grip.", "Trying to squeeze in place with no rotation."],
+    youtubeUrl: LINKS.subBase,
+    difficulty: "beginner",
+  },
 ];
 
 export function getTechniqueById(id: string): Technique | undefined {

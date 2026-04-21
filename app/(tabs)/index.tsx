@@ -1,16 +1,8 @@
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import techniquesData from "../data/techniques.json";
+import { TECHNIQUES } from "../data/techniques";
 import { defaultProgress, loadProgress, type UserProgress } from "../store/progress";
-
-type Technique = {
-  id: string;
-  name: string;
-  belt: string;
-};
-
-const techniques = techniquesData as Technique[];
 
 export default function HomeScreen() {
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
@@ -22,8 +14,8 @@ export default function HomeScreen() {
   );
 
   const beltTechniqueCount = useMemo(
-    () => techniques.filter((item) => item.belt === progress.currentBelt).length,
-    [progress.currentBelt]
+    () => TECHNIQUES.filter((item) => item.belt === "white").length,
+    []
   );
   const learnedCount = progress.learnedTechniqueIds.length;
   const progressPercent = beltTechniqueCount ? Math.round((learnedCount / beltTechniqueCount) * 100) : 0;
