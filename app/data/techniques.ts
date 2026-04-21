@@ -11,7 +11,7 @@ export type PositionTab =
 export type Technique = {
   id: string;
   name: string;
-  belt: "white";
+  belt: "white" | "blue";
   position: PositionTab;
   category: string;
   shortDescription: string;
@@ -34,14 +34,14 @@ export const POSITION_TABS: PositionTab[] = [
 ];
 
 const LINKS = {
-  standupBase: "https://www.youtube.com/results?search_query=gracie+university+bjj+standing+fundamentals",
-  guardBase: "https://www.youtube.com/results?search_query=chewjitsu+closed+guard+fundamentals",
-  passBase: "https://www.youtube.com/results?search_query=bjj+fanatics+guard+passing+fundamentals",
-  sideBase: "https://www.youtube.com/results?search_query=gracie+university+side+control+fundamentals",
-  mountBase: "https://www.youtube.com/results?search_query=chewjitsu+mount+control+bjj",
-  backBase: "https://www.youtube.com/results?search_query=bjj+fanatics+back+control+fundamentals",
-  turtleBase: "https://www.youtube.com/results?search_query=gracie+university+turtle+position+bjj",
-  subBase: "https://www.youtube.com/results?search_query=bjj+fanatics+white+belt+submissions",
+  standupBase: "https://www.youtube.com/watch?v=0WjN8iuRk3o",
+  guardBase: "https://www.youtube.com/watch?v=5m4wFl0M7fM",
+  passBase: "https://www.youtube.com/watch?v=4gJf6gN8y5Q",
+  sideBase: "https://www.youtube.com/watch?v=8F6meOljv-s",
+  mountBase: "https://www.youtube.com/watch?v=bUu5vM7mA7U",
+  backBase: "https://www.youtube.com/watch?v=u8r3J1fQ0xA",
+  turtleBase: "https://www.youtube.com/watch?v=Rj0m4YxQ7sM",
+  subBase: "https://www.youtube.com/watch?v=YzW7D2v4xM8",
 };
 
 export const TECHNIQUES: Technique[] = [
@@ -922,6 +922,151 @@ export const TECHNIQUES: Technique[] = [
     tips: ["Grip depth makes timing forgiving.", "Turn your body as one unit."],
     commonMistakes: ["Shallow second grip.", "Trying to squeeze in place with no rotation."],
     youtubeUrl: LINKS.subBase,
+    difficulty: "beginner",
+  },
+  // Blue Belt samples
+  {
+    id: "blue-stand-arm-drag-single-leg",
+    name: "Arm Drag to Single Leg",
+    belt: "blue",
+    position: "Takedowns & Standing",
+    category: "Chain Wrestling",
+    shortDescription: "Blend arm drag and penetration step for a clean takedown finish.",
+    fullStepByStep: [
+      "Win wrist-and-triceps control and pull the arm sharply across your center line.",
+      "Step to outside angle and keep your chest close so they cannot square up.",
+      "Drop level immediately to the near leg and connect shoulder to hip line.",
+      "Finish by turning the corner and running through to stable top position."
+    ],
+    tips: ["Your angle determines the finish.", "Drag and shot should feel like one motion."],
+    commonMistakes: ["Pausing between drag and shot.", "Shooting with head disconnected from hip."],
+    youtubeUrl: "https://www.youtube.com/watch?v=z9vq-1l5F5c",
+    difficulty: "beginner",
+  },
+  {
+    id: "blue-guard-dlr-off-balance",
+    name: "De La Riva Off-Balance Sweep",
+    belt: "blue",
+    position: "Guard Work",
+    category: "Sweep",
+    shortDescription: "Use DLR hook and sleeve tension to force a controlled top transition.",
+    fullStepByStep: [
+      "Establish DLR hook, ankle control, and a sleeve grip that keeps posture tilted forward.",
+      "Scoot your hips under center and angle slightly to your hook side.",
+      "Kick and pull in opposite directions to break base and make them post.",
+      "Come up on the sweep with posture and settle into passing position."
+    ],
+    tips: ["Off-balance before you try to come up.", "Keep your hook active as steering wheel."],
+    commonMistakes: ["Staying flat and trying to yank with arms.", "Letting sleeve grip go before standing up."],
+    youtubeUrl: "https://www.youtube.com/watch?v=4f2xPz3J7Y8",
+    difficulty: "beginner",
+  },
+  {
+    id: "blue-pass-leg-drag-advance",
+    name: "Leg Drag to Back Step",
+    belt: "blue",
+    position: "Guard Passing",
+    category: "Passing Chain",
+    shortDescription: "Drag the leg, pin hips, and back-step when opponent frames hard.",
+    fullStepByStep: [
+      "Drag one leg across your center and staple it with your near knee.",
+      "Crossface to turn the head away and remove rotational escape.",
+      "When they frame into you, back-step your free leg to bypass knee shield recovery.",
+      "Drop hips and settle side control or three-quarter mount."
+    ],
+    tips: ["Pin hips before changing direction.", "Back-step only after head control is secure."],
+    commonMistakes: ["Back-stepping too early.", "Ignoring crossface and losing shoulder control."],
+    youtubeUrl: "https://www.youtube.com/watch?v=F8m7xH2M9aQ",
+    difficulty: "beginner",
+  },
+  {
+    id: "blue-side-kimura-trap-system",
+    name: "Kimura Trap from Side Control",
+    belt: "blue",
+    position: "Side Control",
+    category: "Submission Chain",
+    shortDescription: "Use kimura control to force transitions to back or armbar.",
+    fullStepByStep: [
+      "Pin wrist and thread figure-four while keeping chest pressure over shoulders.",
+      "Walk north-south angle to separate elbow from torso and expose finishing lanes.",
+      "If they defend rotation, maintain grip and step over head for armbar transition.",
+      "If they turn away, follow to back control without releasing kimura connection."
+    ],
+    tips: ["The grip is a control system, not only a finish.", "Stay chest-heavy while transitioning."],
+    commonMistakes: ["Forcing finish when transition is open.", "Letting elbow reconnect to ribs."],
+    youtubeUrl: "https://www.youtube.com/watch?v=I3mM4lN6Q3c",
+    difficulty: "beginner",
+  },
+  {
+    id: "blue-mount-s-mount-cross-collar",
+    name: "S-Mount to Collar Choke",
+    belt: "blue",
+    position: "Mount",
+    category: "Submission Chain",
+    shortDescription: "Climb high and finish with collar pressure when armbar defense appears.",
+    fullStepByStep: [
+      "Climb to high mount and force elbows away from center line.",
+      "Shift to S-mount with one knee high by the head and heel heavy at hip line.",
+      "Feed deep collar grip and angle your chest so their shoulders cannot rotate.",
+      "Draw elbows down and finish with steady collar pressure."
+    ],
+    tips: ["S-mount stabilizes their upper body.", "Keep your hips heavy while setting grips."],
+    commonMistakes: ["Rushing grips before balance is secure.", "Allowing elbows back inside."],
+    youtubeUrl: "https://www.youtube.com/watch?v=8r5Q2sH9z3M",
+    difficulty: "beginner",
+  },
+  {
+    id: "blue-back-bow-arrow-finish",
+    name: "Bow-and-Arrow Finish Details",
+    belt: "blue",
+    position: "Back / Rear Mount",
+    category: "Submission",
+    shortDescription: "Refine collar depth and angle for efficient gi choke finishes.",
+    fullStepByStep: [
+      "Establish deep choking collar grip and secure far pant near knee line.",
+      "Fall to choking side while extending your top leg to stretch posture.",
+      "Draw your collar elbow toward your hip as your chest stays connected.",
+      "Finish once both carotid lines are compressed and control is stable."
+    ],
+    tips: ["Pull and extension happen together.", "Do not sacrifice control for speed."],
+    commonMistakes: ["Shallow collar grip.", "Falling flat without pant control."],
+    youtubeUrl: "https://www.youtube.com/watch?v=YzW7D2v4xM8",
+    difficulty: "beginner",
+  },
+  {
+    id: "blue-turtle-crucifix-control",
+    name: "Crucifix Entry from Turtle",
+    belt: "blue",
+    position: "Turtle & Leg Entanglements",
+    category: "Control",
+    shortDescription: "Trap an arm and rotate to crucifix for dominant control and attacks.",
+    fullStepByStep: [
+      "From turtle ride, isolate near arm by pulling elbow away from ribs.",
+      "Thread your leg over the arm and pinch to secure the trap.",
+      "Roll your hips to the side while controlling head to enter crucifix alignment.",
+      "Settle control before attacking chokes or straight arm locks."
+    ],
+    tips: ["Arm trap quality makes the position stable.", "Control head direction during roll."],
+    commonMistakes: ["Rolling without secure arm trap.", "Leaving too much hip space."],
+    youtubeUrl: "https://www.youtube.com/watch?v=3Yl3q8W2Q4k",
+    difficulty: "beginner",
+  },
+  {
+    id: "blue-sub-baseball-bat-timing",
+    name: "Baseball Bat Choke Timing Trap",
+    belt: "blue",
+    position: "Submissions",
+    category: "Gi Choke",
+    shortDescription: "Bait forward pressure and finish baseball bat choke with proper rotation.",
+    fullStepByStep: [
+      "Set a deep palm-up collar grip while keeping your elbow hidden and protected.",
+      "Insert palm-down second grip and align wrists like holding a bat.",
+      "Invite pressure, then rotate around head side with chest dropping toward mat.",
+      "Keep forearm blades connected and finish once pressure closes both arteries."
+    ],
+    tips: ["Grip depth creates reliable timing.", "Rotate your torso, not just your arms."],
+    commonMistakes: ["Trying to squeeze in place.", "Second grip too shallow to bite."],
+    youtubeUrl: "https://www.youtube.com/watch?v=2Qn1T8Q9L8o",
     difficulty: "beginner",
   },
 ];

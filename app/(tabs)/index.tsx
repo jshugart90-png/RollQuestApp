@@ -1,8 +1,11 @@
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { TECHNIQUES } from "../data/techniques";
-import { defaultProgress, loadProgress, type UserProgress } from "../store/progress";
+import { defaultProgress, loadProgress, updateCurrentBelt, type BeltLevel, type UserProgress } from "../store/progress";
+
+const BELTS: BeltLevel[] = ["white", "blue"];
 
 export default function HomeScreen() {
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
@@ -14,14 +17,20 @@ export default function HomeScreen() {
   );
 
   const beltTechniqueCount = useMemo(
-    () => TECHNIQUES.filter((item) => item.belt === "white").length,
-    []
+    () => TECHNIQUES.filter((item) => item.belt === progress.currentBelt).length,
+    [progress.currentBelt]
   );
   const learnedCount = progress.learnedTechniqueIds.length;
   const progressPercent = beltTechniqueCount ? Math.round((learnedCount / beltTechniqueCount) * 100) : 0;
 
+  async function onSelectBelt(belt: BeltLevel) {
+    const updated = await updateCurrentBelt(belt);
+    setProgress(updated);
+  }
+
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: "#050505" }} contentContainerStyle={{ padding: 18, gap: 14 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["top"]}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 18, gap: 14 }}>
       <Text style={{ color: "#FFFFFF", fontSize: 32, fontWeight: "900" }}>RollQuest</Text>
       <Text style={{ color: "#B8BDC9", fontSize: 16 }}>
         Small reps, daily wins. Build unstoppable jiu-jitsu fundamentals.
@@ -29,7 +38,25 @@ export default function HomeScreen() {
 
       <View style={card}>
         <Text style={label}>Current Belt</Text>
-        <Text style={value}>{progress.currentBelt}</Text>
+        <Text style={[value, { textTransform: "capitalize" }]}>{progress.currentBelt}</Text>
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+          {BELTS.map((belt) => (
+            <Pressable
+              key={belt}
+              onPress={() => void onSelectBelt(belt)}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: progress.currentBelt === belt ? "#E10600" : "#2A2A2A",
+                backgroundColor: progress.currentBelt === belt ? "rgba(225,6,0,0.18)" : "#0F0F0F",
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "800", textTransform: "capitalize" }}>{belt}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       <View style={card}>
@@ -56,6 +83,7 @@ export default function HomeScreen() {
         </View>
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

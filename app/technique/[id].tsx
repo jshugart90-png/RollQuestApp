@@ -31,7 +31,12 @@ export default function TechniqueDetailScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: technique.name, headerShown: true, headerStyle: { backgroundColor: "#0B0B0B" }, headerTintColor: "#FFFFFF" }} />
+      <Stack.Screen
+        options={{
+          title: technique.name,
+          headerBackTitleVisible: false,
+        }}
+      />
       <ScrollView style={{ flex: 1, backgroundColor: "#050505" }} contentContainerStyle={{ paddingBottom: 24 }}>
         <View
           style={{
@@ -54,11 +59,23 @@ export default function TechniqueDetailScreen() {
           <View style={sectionCard}>
             <Text style={sectionTitle}>Step-by-Step Breakdown</Text>
             {technique.fullStepByStep.map((step, index) => (
-              <View key={`${technique.id}-step-${index}`} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+              <View
+                key={`${technique.id}-step-${index}`}
+                style={{
+                  flexDirection: "row",
+                  gap: 12,
+                  alignItems: "flex-start",
+                  backgroundColor: "#0B0B0B",
+                  borderWidth: 1,
+                  borderColor: "#1B1B1B",
+                  borderRadius: 12,
+                  padding: 12,
+                }}
+              >
                 <View
                   style={{
-                    width: 24,
-                    height: 24,
+                    width: 26,
+                    height: 26,
                     borderRadius: 999,
                     backgroundColor: "#E10600",
                     justifyContent: "center",
@@ -101,8 +118,8 @@ export default function TechniqueDetailScreen() {
               padding: 14,
             }}
           >
-            <Text style={{ color: "#D4B06A", fontWeight: "900", fontSize: 16 }}>Watch YouTube Breakdown</Text>
-            <Text style={{ color: "#B7BECC", marginTop: 4 }}>Study details, then drill at low speed before adding intensity.</Text>
+            <Text style={{ color: "#D4B06A", fontWeight: "900", fontSize: 16 }}>Watch Exact YouTube Breakdown</Text>
+            <Text style={{ color: "#B7BECC", marginTop: 4 }}>Open the full video, study details, then drill with control and intention.</Text>
           </Pressable>
 
           <Pressable

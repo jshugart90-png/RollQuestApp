@@ -1,7 +1,9 @@
 import { Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LearnScreen() {
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["top"]}>
     <View
       style={{
         flex: 1,
@@ -30,5 +32,6 @@ export default function LearnScreen() {
         <Text style={{ color: "#FFFFFF", marginTop: 4 }}>- Daily mission cards</Text>
       </View>
     </View>
+    </SafeAreaView>
   );
 }
