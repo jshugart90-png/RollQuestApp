@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { defaultProgress, loadProgress, updateCurrentBelt, type BeltLevel, type UserProgress } from "../store/progress";
+import {
+  CURRICULUM_BELTS,
+  defaultProgress,
+  loadProgress,
+  updateCurrentBelt,
+  type BeltLevel,
+  type UserProgress,
+} from "../store/progress";
 
-const BELTS: BeltLevel[] = ["white", "blue", "purple", "brown", "black"];
+const BELTS = CURRICULUM_BELTS as unknown as BeltLevel[];
 
 export default function ProfileScreen() {
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);

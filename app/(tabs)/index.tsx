@@ -3,9 +3,16 @@ import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TECHNIQUES } from "../data/techniques";
-import { defaultProgress, loadProgress, updateCurrentBelt, type BeltLevel, type UserProgress } from "../store/progress";
+import {
+  CURRICULUM_BELTS,
+  defaultProgress,
+  loadProgress,
+  updateCurrentBelt,
+  type BeltLevel,
+  type UserProgress,
+} from "../store/progress";
 
-const BELTS: BeltLevel[] = ["white", "blue"];
+const BELTS = CURRICULUM_BELTS as unknown as BeltLevel[];
 
 export default function HomeScreen() {
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
@@ -20,7 +27,12 @@ export default function HomeScreen() {
     () => TECHNIQUES.filter((item) => item.belt === progress.currentBelt).length,
     [progress.currentBelt]
   );
-  const learnedCount = progress.learnedTechniqueIds.length;
+  const learnedCount = useMemo(() => {
+    const ids = new Set(
+      TECHNIQUES.filter((t) => t.belt === progress.currentBelt).map((t) => t.id)
+    );
+    return progress.learnedTechniqueIds.filter((id) => ids.has(id)).length;
+  }, [progress.currentBelt, progress.learnedTechniqueIds]);
   const progressPercent = beltTechniqueCount ? Math.round((learnedCount / beltTechniqueCount) * 100) : 0;
 
   async function onSelectBelt(belt: BeltLevel) {

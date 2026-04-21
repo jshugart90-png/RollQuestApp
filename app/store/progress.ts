@@ -18,17 +18,23 @@ export const defaultProgress: UserProgress = {
   learnedTechniqueIds: [],
 };
 
+/** Belts that currently have technique curriculum in-app */
+export const CURRICULUM_BELTS = ["white", "blue"] as const satisfies readonly BeltLevel[];
+
 export async function loadProgress(): Promise<UserProgress> {
   try {
     const raw = await AsyncStorage.getItem(PROGRESS_KEY);
     if (!raw) return defaultProgress;
     const parsed = JSON.parse(raw) as Partial<UserProgress>;
     const normalizedBelt =
-      typeof parsed.currentBelt === "string" ? parsed.currentBelt.toLowerCase() as BeltLevel : defaultProgress.currentBelt;
+      typeof parsed.currentBelt === "string" ? (parsed.currentBelt.toLowerCase() as BeltLevel) : defaultProgress.currentBelt;
+    const curriculumBelt = (CURRICULUM_BELTS as readonly string[]).includes(normalizedBelt)
+      ? normalizedBelt
+      : defaultProgress.currentBelt;
     return {
       ...defaultProgress,
       ...parsed,
-      currentBelt: normalizedBelt,
+      currentBelt: curriculumBelt,
       learnedTechniqueIds: Array.isArray(parsed.learnedTechniqueIds) ? parsed.learnedTechniqueIds : [],
     };
   } catch {
@@ -42,7 +48,8 @@ export async function saveProgress(progress: UserProgress): Promise<void> {
 
 export async function updateCurrentBelt(currentBelt: BeltLevel): Promise<UserProgress> {
   const progress = await loadProgress();
-  const updated = { ...progress, currentBelt };
+  const belt = (CURRICULUM_BELTS as readonly string[]).includes(currentBelt) ? currentBelt : defaultProgress.currentBelt;
+  const updated = { ...progress, currentBelt: belt };
   await saveProgress(updated);
   return updated;
 }
