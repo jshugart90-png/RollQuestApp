@@ -17,6 +17,7 @@ type LegacyNote = {
   id: string;
   text: string;
   createdAt: string;
+  updatedAt?: string;
   techniqueIds?: string[];
   techniques?: Technique[];
 };
