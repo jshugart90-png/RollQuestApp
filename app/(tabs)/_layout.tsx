@@ -1,13 +1,16 @@
 import { FontAwesome6, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useGymStore } from "../store/gym";
 
 export default function TabLayout() {
+  const accentColor = useGymStore((state) => state.accentColor);
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
-        tabBarActiveTintColor: '#E10600',
+        tabBarActiveTintColor: accentColor,
         tabBarInactiveTintColor: '#8C8F9A',
         tabBarStyle: {
           backgroundColor: '#090909',
@@ -30,10 +33,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="learn"
+        name="my-gym"
         options={{
-          title: 'Learn',
-          tabBarIcon: ({ color, size }) => <FontAwesome6 name="graduation-cap" color={color} size={size} />,
+          title: 'My Gym',
+          tabBarIcon: ({ color, size }) => <FontAwesome6 name="dumbbell" color={color} size={size} />,
         }}
       />
       <Tabs.Screen

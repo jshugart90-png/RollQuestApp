@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getTechniqueById } from "../data/techniques";
+import { useGymStore, withAlpha } from "../store/gym";
 import { defaultProgress, loadProgress, toggleLearnedTechnique, type UserProgress } from "../store/progress";
 import { addMyTechnique, loadMyTechniques } from "../store/myTechniques";
 
@@ -26,6 +27,7 @@ export default function TechniqueDetailScreen() {
           headerStyle: { backgroundColor: "#111" },
           headerTintColor: "#fff",
           headerTitleStyle: { fontWeight: "bold", color: "#fff" },
+          headerBackTitle: "",
         }}
       />
       {!technique ? (
@@ -54,6 +56,7 @@ function TechniqueBody({
   onProgressChange: (p: UserProgress) => void;
 }) {
   const mastered = progress.learnedTechniqueIds.includes(technique.id);
+  const accentColor = useGymStore((state) => state.accentColor);
   const [inMyLibrary, setInMyLibrary] = useState(false);
 
   const refreshMyLibrary = useCallback(() => {
@@ -124,7 +127,7 @@ function TechniqueBody({
                     width: 28,
                     height: 28,
                     borderRadius: 999,
-                    backgroundColor: "#E10600",
+                    backgroundColor: accentColor,
                     justifyContent: "center",
                     alignItems: "center",
                     marginTop: 2,
@@ -175,8 +178,8 @@ function TechniqueBody({
             onPress={() => void onToggleMastered()}
             style={{
               borderWidth: 1,
-              borderColor: mastered ? "#D4B06A" : "#E10600",
-              backgroundColor: mastered ? "rgba(212,176,106,0.16)" : "rgba(225,6,0,0.16)",
+              borderColor: mastered ? "#D4B06A" : accentColor,
+              backgroundColor: mastered ? "rgba(212,176,106,0.16)" : withAlpha(accentColor, 0.16),
               borderRadius: 14,
               padding: 15,
               alignItems: "center",
