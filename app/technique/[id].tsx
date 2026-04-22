@@ -1,13 +1,20 @@
-import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getTechniqueById } from "../data/techniques";
 import { useGymStore, withAlpha } from "../store/gym";
-import { defaultProgress, loadProgress, toggleLearnedTechnique, type UserProgress } from "../store/progress";
-import { addMyTechnique, loadMyTechniques } from "../store/myTechniques";
+import { loadNotes, type SessionNote } from "../store/notes";
+import {
+  addToMyLibrary,
+  defaultProgress,
+  loadProgress,
+  toggleLearnedTechnique,
+  type UserProgress,
+} from "../store/progress";
 
 export default function TechniqueDetailScreen() {
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
   const technique = getTechniqueById(id ?? "");
@@ -40,7 +47,12 @@ export default function TechniqueDetailScreen() {
           </View>
         </SafeAreaView>
       ) : (
-        <TechniqueBody technique={technique} progress={progress} onProgressChange={setProgress} />
+        <TechniqueBody
+          technique={technique}
+          progress={progress}
+          onProgressChange={setProgress}
+          onOpenNotes={() => router.push(`/notes?techniqueId=${technique.id}`)}
+        />
       )}
     </>
   );
@@ -50,25 +62,35 @@ function TechniqueBody({
   technique,
   progress,
   onProgressChange,
+  onOpenNotes,
 }: {
   technique: NonNullable<ReturnType<typeof getTechniqueById>>;
   progress: UserProgress;
   onProgressChange: (p: UserProgress) => void;
+  onOpenNotes: () => void;
 }) {
   const mastered = progress.learnedTechniqueIds.includes(technique.id);
   const accentColor = useGymStore((state) => state.accentColor);
   const [inMyLibrary, setInMyLibrary] = useState(false);
+  const [linkedNotes, setLinkedNotes] = useState<SessionNote[]>([]);
 
   const refreshMyLibrary = useCallback(() => {
-    void loadMyTechniques().then((list) => {
-      setInMyLibrary(list.some((t) => t.id === technique.id));
+    void loadProgress().then((state) => {
+      setInMyLibrary(state.myTechniques.includes(technique.id));
+    });
+  }, [technique.id]);
+
+  const refreshLinkedNotes = useCallback(() => {
+    void loadNotes().then((notes) => {
+      setLinkedNotes(notes.filter((note) => note.techniques.some((tech) => tech.id === technique.id)));
     });
   }, [technique.id]);
 
   useFocusEffect(
     useCallback(() => {
       refreshMyLibrary();
-    }, [refreshMyLibrary])
+      refreshLinkedNotes();
+    }, [refreshLinkedNotes, refreshMyLibrary])
   );
 
   async function onToggleMastered() {
@@ -77,7 +99,7 @@ function TechniqueBody({
   }
 
   async function onAddToMyLibrary() {
-    await addMyTechnique(technique);
+    await addToMyLibrary(technique.id);
     setInMyLibrary(true);
   }
 
@@ -211,6 +233,46 @@ function TechniqueBody({
               Library.
             </Text>
           </Pressable>
+
+          <View style={sectionCard}>
+            <Text style={sectionTitle}>Class Notes</Text>
+            <Text style={{ color: "#9AA2B1" }}>
+              {linkedNotes.length === 0
+                ? "No linked notes yet. Save a class note and attach this technique."
+                : `${linkedNotes.length} linked note${linkedNotes.length === 1 ? "" : "s"} found.`}
+            </Text>
+            {linkedNotes.slice(0, 3).map((note) => (
+              <View
+                key={note.id}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#252525",
+                  borderRadius: 10,
+                  backgroundColor: "#0B0B0B",
+                  padding: 10,
+                }}
+              >
+                <Text style={{ color: "#C7CDDA" }} numberOfLines={3}>
+                  {note.text}
+                </Text>
+              </View>
+            ))}
+            <Pressable
+              onPress={onOpenNotes}
+              style={{
+                borderWidth: 1,
+                borderColor: accentColor,
+                backgroundColor: withAlpha(accentColor, 0.18),
+                borderRadius: 12,
+                padding: 12,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>
+                {linkedNotes.length === 0 ? "Create / Link Notes" : "Review Notes for This Technique"}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

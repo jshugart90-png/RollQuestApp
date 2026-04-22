@@ -5,32 +5,40 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { POSITION_TABS, TECHNIQUES, type PositionTab, type Technique } from "../data/techniques";
 import { useGymStore, withAlpha } from "../store/gym";
 import { CURRICULUM_BELTS, defaultProgress, loadProgress, updateCurrentBelt, type BeltLevel, type UserProgress } from "../store/progress";
-import { loadMyTechniques } from "../store/myTechniques";
 
-type LibraryMode = "all" | "mine";
+type LibraryMode = "all" | "mine" | "learned";
+type PositionFilter = "All" | PositionTab;
 
 export default function LibraryScreen() {
   const router = useRouter();
   const accentColor = useGymStore((state) => state.accentColor);
-  const [activePosition, setActivePosition] = useState<PositionTab>(POSITION_TABS[0]);
+  const [activePosition, setActivePosition] = useState<PositionFilter>("All");
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
-  const [myTechniques, setMyTechniques] = useState<Technique[]>([]);
   const [libraryMode, setLibraryMode] = useState<LibraryMode>("all");
 
   useFocusEffect(
     useCallback(() => {
       void loadProgress().then(setProgress);
-      void loadMyTechniques().then(setMyTechniques);
     }, [])
   );
 
-  const source = libraryMode === "mine" ? myTechniques : TECHNIQUES;
+  const source = useMemo(() => {
+    if (libraryMode === "mine") {
+      return TECHNIQUES.filter((item) => progress.myTechniques.includes(item.id));
+    }
+    if (libraryMode === "learned") {
+      return TECHNIQUES.filter((item) => progress.learnedTechniqueIds.includes(item.id));
+    }
+    return TECHNIQUES;
+  }, [libraryMode, progress.learnedTechniqueIds, progress.myTechniques]);
   const filtered = useMemo(
     () =>
       source.filter(
-        (item) => item.position === activePosition && item.belt === progress.currentBelt
+        (item) =>
+          (activePosition === "All" || item.position === activePosition) &&
+          (libraryMode === "learned" || item.belt === progress.currentBelt)
       ),
-    [activePosition, progress.currentBelt, source]
+    [activePosition, libraryMode, progress.currentBelt, source]
   );
 
   return (
@@ -90,10 +98,23 @@ export default function LibraryScreen() {
         >
           <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>My Library</Text>
         </Pressable>
+        <Pressable
+          onPress={() => setLibraryMode("learned")}
+          style={{
+            borderWidth: 1,
+            borderColor: libraryMode === "learned" ? "#D4B06A" : "#2A2A2A",
+            backgroundColor: libraryMode === "learned" ? "rgba(212,176,106,0.2)" : "#101010",
+            borderRadius: 999,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+          }}
+        >
+          <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>Learned</Text>
+        </Pressable>
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
-        {POSITION_TABS.map((position) => {
+        {(["All", ...POSITION_TABS] as const).map((position) => {
           const selected = position === activePosition;
           return (
             <Pressable
@@ -123,9 +144,17 @@ export default function LibraryScreen() {
           padding: 12,
         }}
       >
-        <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 16 }}>{activePosition}</Text>
+        <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 16 }}>
+          {activePosition === "All" ? "All Positions" : activePosition}
+        </Text>
         <Text style={{ color: "#9AA2B1", marginTop: 4 }}>
-          {filtered.length} technique{filtered.length === 1 ? "" : "s"} in {libraryMode === "mine" ? "My Library" : "All Techniques"}.
+          {filtered.length} technique{filtered.length === 1 ? "" : "s"} in{" "}
+          {libraryMode === "mine"
+            ? "My Library"
+            : libraryMode === "learned"
+              ? "Learned Techniques"
+              : "All Techniques"}
+          .
         </Text>
       </View>
 
