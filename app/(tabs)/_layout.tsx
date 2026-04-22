@@ -37,17 +37,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
         name="notes"
         options={{
           title: 'Notes',
           tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="notebook-edit-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />,
         }}
       />
     </Tabs>
