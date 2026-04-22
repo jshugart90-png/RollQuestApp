@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useGymStore, withAlpha } from "../store/gym";
 import {
   CURRICULUM_BELTS,
   defaultProgress,
@@ -14,6 +15,7 @@ const BELTS = CURRICULUM_BELTS as unknown as BeltLevel[];
 
 export default function ProfileScreen() {
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
+  const accentColor = useGymStore((state) => state.accentColor);
 
   useEffect(() => {
     void loadProgress().then(setProgress);
@@ -44,9 +46,9 @@ export default function ProfileScreen() {
               onPress={() => void onSelectBelt(belt)}
               style={{
                 borderWidth: 1,
-                borderColor: selected ? "#E10600" : "#2A2A2A",
+                borderColor: selected ? accentColor : "#2A2A2A",
                 borderRadius: 12,
-                backgroundColor: selected ? "rgba(225,6,0,0.16)" : "#0F0F0F",
+                backgroundColor: selected ? withAlpha(accentColor, 0.16) : "#0F0F0F",
                 padding: 12,
               }}
             >

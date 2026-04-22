@@ -19,7 +19,7 @@ export const defaultProgress: UserProgress = {
 };
 
 /** Belts that currently have technique curriculum in-app */
-export const CURRICULUM_BELTS = ["white", "blue"] as const satisfies readonly BeltLevel[];
+export const CURRICULUM_BELTS = ["white", "blue", "purple", "brown"] as const satisfies readonly BeltLevel[];
 
 export async function loadProgress(): Promise<UserProgress> {
   try {

@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { POSITION_TABS, TECHNIQUES, type PositionTab, type Technique } from "../data/techniques";
+import { useGymStore, withAlpha } from "../store/gym";
 import { CURRICULUM_BELTS, defaultProgress, loadProgress, updateCurrentBelt, type BeltLevel, type UserProgress } from "../store/progress";
 import { loadMyTechniques } from "../store/myTechniques";
 
@@ -10,6 +11,7 @@ type LibraryMode = "all" | "mine";
 
 export default function LibraryScreen() {
   const router = useRouter();
+  const accentColor = useGymStore((state) => state.accentColor);
   const [activePosition, setActivePosition] = useState<PositionTab>(POSITION_TABS[0]);
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
   const [myTechniques, setMyTechniques] = useState<Technique[]>([]);
@@ -66,8 +68,8 @@ export default function LibraryScreen() {
           onPress={() => setLibraryMode("all")}
           style={{
             borderWidth: 1,
-            borderColor: libraryMode === "all" ? "#E10600" : "#2A2A2A",
-            backgroundColor: libraryMode === "all" ? "rgba(225,6,0,0.2)" : "#101010",
+            borderColor: libraryMode === "all" ? accentColor : "#2A2A2A",
+            backgroundColor: libraryMode === "all" ? withAlpha(accentColor, 0.2) : "#101010",
             borderRadius: 999,
             paddingHorizontal: 12,
             paddingVertical: 8,
@@ -102,8 +104,8 @@ export default function LibraryScreen() {
                 paddingVertical: 9,
                 borderRadius: 999,
                 borderWidth: 1,
-                borderColor: selected ? "#E10600" : "#2A2A2A",
-                backgroundColor: selected ? "rgba(225,6,0,0.2)" : "#101010",
+                borderColor: selected ? accentColor : "#2A2A2A",
+                backgroundColor: selected ? withAlpha(accentColor, 0.2) : "#101010",
               }}
             >
               <Text style={{ color: selected ? "#FFFFFF" : "#9AA2B1", fontWeight: "700" }}>{position}</Text>
@@ -147,7 +149,7 @@ export default function LibraryScreen() {
               {tech.category} • {tech.difficulty}
             </Text>
             <Text style={{ color: "#8E96A5" }}>{tech.shortDescription}</Text>
-            <Text style={{ color: mastered ? "#D4B06A" : "#E10600", fontWeight: "800" }}>
+            <Text style={{ color: mastered ? "#D4B06A" : accentColor, fontWeight: "800" }}>
               {mastered ? "Mastered - Keep Sharp" : "Open Technique"}
             </Text>
           </Pressable>
