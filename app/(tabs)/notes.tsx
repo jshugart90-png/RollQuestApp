@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TECHNIQUES, type Technique } from "../data/techniques";
 import { useGymStore, withAlpha } from "../store/gym";
+import { addMultipleToMyLibrary } from "../store/progress";
 import {
   addNote,
   deleteNote,
@@ -22,7 +23,6 @@ import {
   updateNote,
   type SessionNote,
 } from "../store/notes";
-import { addMyTechnique } from "../store/myTechniques";
 
 type BeltFilter = "all" | "white" | "blue" | "purple" | "brown";
 
@@ -43,6 +43,7 @@ function formatNoteDate(iso: string) {
 
 export default function NotesScreen() {
   const router = useRouter();
+  const { techniqueId } = useLocalSearchParams<{ techniqueId?: string }>();
   const accentColor = useGymStore((state) => state.accentColor);
   const [notes, setNotes] = useState<SessionNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +88,10 @@ export default function NotesScreen() {
   }, [search, beltFilter]);
 
   const selectedIds = useMemo(() => new Set(draftTechniques.map((t) => t.id)), [draftTechniques]);
+  const filteredNotes = useMemo(() => {
+    if (!techniqueId) return notes;
+    return notes.filter((note) => note.techniques.some((tech) => tech.id === techniqueId));
+  }, [notes, techniqueId]);
 
   function openNew() {
     setEditingId(null);
@@ -140,9 +145,7 @@ export default function NotesScreen() {
         await addNote(text, draftTechniques);
       }
       if (addToMyLibrary && draftTechniques.length > 0) {
-        for (const t of draftTechniques) {
-          await addMyTechnique(t);
-        }
+        await addMultipleToMyLibrary(draftTechniques.map((t) => t.id));
       }
       await reload();
       closeModal();
@@ -186,11 +189,30 @@ export default function NotesScreen() {
           <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>+ New class note</Text>
         </Pressable>
 
+        {techniqueId ? (
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: withAlpha(accentColor, 0.7),
+              backgroundColor: withAlpha(accentColor, 0.12),
+              borderRadius: 12,
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>
+              Showing notes linked to selected technique.
+            </Text>
+            <Text style={{ color: "#AAB2C2", marginTop: 4 }}>
+              Clear the filter by returning from Library/Technique and opening Notes directly.
+            </Text>
+          </View>
+        ) : null}
+
         {loading ? (
           <View style={{ padding: 24, alignItems: "center" }}>
             <ActivityIndicator color={accentColor} />
           </View>
-        ) : notes.length === 0 ? (
+        ) : filteredNotes.length === 0 ? (
           <View
             style={{
               borderWidth: 1,
@@ -203,12 +225,13 @@ export default function NotesScreen() {
           >
             <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>No notes yet</Text>
             <Text style={{ color: "#8E96A5", lineHeight: 22 }}>
-              After your next class, tap &quot;New class note&quot;, write what you remember, and attach the techniques
-              you drilled. They will show up here and can sync to My Library.
+              {techniqueId
+                ? "No notes are linked to this technique yet. Create one and attach this technique to review faster later."
+                : "After your next class, tap \"New class note\", write what you remember, and attach the techniques you drilled. They will show up here and can sync to My Library."}
             </Text>
           </View>
         ) : (
-          notes.map((note) => (
+          filteredNotes.map((note) => (
             <View
               key={note.id}
               style={{
