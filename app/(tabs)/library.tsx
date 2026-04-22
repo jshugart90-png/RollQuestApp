@@ -38,7 +38,7 @@ export default function LibraryScreen() {
       <Text style={{ color: "#D4B06A", fontWeight: "700" }}>
         {progress.currentBelt.toUpperCase()} Belt Curriculum
       </Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
         {(CURRICULUM_BELTS as unknown as BeltLevel[]).map((belt) => {
           const selected = belt === progress.currentBelt;
           return (
@@ -60,7 +60,7 @@ export default function LibraryScreen() {
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
       <View style={{ flexDirection: "row", gap: 8 }}>
         <Pressable
           onPress={() => setLibraryMode("all")}

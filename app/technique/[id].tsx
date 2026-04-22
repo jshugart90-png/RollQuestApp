@@ -1,5 +1,5 @@
-import { Stack, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getTechniqueById } from "../data/techniques";
@@ -54,10 +54,28 @@ function TechniqueBody({
   onProgressChange: (p: UserProgress) => void;
 }) {
   const mastered = progress.learnedTechniqueIds.includes(technique.id);
+  const [inMyLibrary, setInMyLibrary] = useState(false);
+
+  const refreshMyLibrary = useCallback(() => {
+    void loadMyTechniques().then((list) => {
+      setInMyLibrary(list.some((t) => t.id === technique.id));
+    });
+  }, [technique.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshMyLibrary();
+    }, [refreshMyLibrary])
+  );
 
   async function onToggleMastered() {
     const updated = await toggleLearnedTechnique(technique.id);
     onProgressChange(updated);
+  }
+
+  async function onAddToMyLibrary() {
+    await addMyTechnique(technique);
+    setInMyLibrary(true);
   }
 
   return (
@@ -166,6 +184,28 @@ function TechniqueBody({
           >
             <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>
               {mastered ? "Mastered - Tap to Unmark" : "Mark as Mastered"}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => void onAddToMyLibrary()}
+            disabled={inMyLibrary}
+            style={{
+              borderWidth: 1,
+              borderColor: inMyLibrary ? "#2A4A2A" : "#D4B06A",
+              backgroundColor: inMyLibrary ? "rgba(60,120,60,0.15)" : "rgba(212,176,106,0.12)",
+              borderRadius: 14,
+              padding: 15,
+              alignItems: "center",
+              opacity: inMyLibrary ? 0.85 : 1,
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>
+              {inMyLibrary ? "In My Library" : "Add to My Library"}
+            </Text>
+            <Text style={{ color: "#8E96A5", marginTop: 6, textAlign: "center", fontSize: 13 }}>
+              Link this technique from the Notes tab to class notes, or save it here for quick access in Library → My
+              Library.
             </Text>
           </Pressable>
         </View>
