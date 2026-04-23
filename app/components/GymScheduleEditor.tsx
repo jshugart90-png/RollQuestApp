@@ -449,7 +449,6 @@ export function GymScheduleEditor({
                   scrollEnabled={false}
                   style={{ minHeight: Math.max(88, data.length * 124) }}
                   activationDistance={14}
-                  enableAutoscroll={false}
                   autoscrollSpeed={0}
                   autoscrollThreshold={0}
                   onDragBegin={() => onDragStateChange?.(true)}
