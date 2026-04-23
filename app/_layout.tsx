@@ -10,6 +10,10 @@ import { useGymStore } from "./store/gym";
 
 import "react-native-reanimated";
 
+export const unstable_settings = {
+  anchor: '(tabs)',
+};
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const accentColor = useGymStore((state) => state.accentColor);
