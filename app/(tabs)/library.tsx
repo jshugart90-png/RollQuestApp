@@ -2,7 +2,8 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { POSITION_TABS, TECHNIQUES, type PositionTab, type Technique } from "../data/techniques";
+import { POSITION_TABS, type PositionTab } from "../data/techniques";
+import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
 import { useGymStore, withAlpha } from "../store/gym";
 import { CURRICULUM_BELTS, defaultProgress, loadProgress, updateCurrentBelt, type BeltLevel, type UserProgress } from "../store/progress";
 
@@ -12,6 +13,7 @@ type PositionFilter = "All" | PositionTab;
 export default function LibraryScreen() {
   const router = useRouter();
   const accentColor = useGymStore((state) => state.accentColor);
+  const techniques = useResolvedTechniques();
   const [activePosition, setActivePosition] = useState<PositionFilter>("All");
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
   const [libraryMode, setLibraryMode] = useState<LibraryMode>("all");
@@ -24,13 +26,13 @@ export default function LibraryScreen() {
 
   const source = useMemo(() => {
     if (libraryMode === "mine") {
-      return TECHNIQUES.filter((item) => progress.myTechniques.includes(item.id));
+      return techniques.filter((item) => progress.myTechniques.includes(item.id));
     }
     if (libraryMode === "learned") {
-      return TECHNIQUES.filter((item) => progress.learnedTechniqueIds.includes(item.id));
+      return techniques.filter((item) => progress.learnedTechniqueIds.includes(item.id));
     }
-    return TECHNIQUES;
-  }, [libraryMode, progress.learnedTechniqueIds, progress.myTechniques]);
+    return techniques;
+  }, [libraryMode, progress.learnedTechniqueIds, progress.myTechniques, techniques]);
   const filtered = useMemo(
     () =>
       source.filter(

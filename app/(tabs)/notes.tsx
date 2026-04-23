@@ -13,7 +13,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { TECHNIQUES, type Technique } from "../data/techniques";
+import { type Technique } from "../data/techniques";
+import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
 import { useGymStore, withAlpha } from "../store/gym";
 import { addMultipleToMyLibrary } from "../store/progress";
 import {
@@ -72,20 +73,23 @@ export default function NotesScreen() {
     }, [reload])
   );
 
+  const techniques = useResolvedTechniques();
   const searchResults = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return TECHNIQUES.filter((t) => {
-      if (beltFilter !== "all" && t.belt !== beltFilter) return false;
-      if (!q) return true;
-      return (
-        t.name.toLowerCase().includes(q) ||
-        t.shortDescription.toLowerCase().includes(q) ||
-        t.category.toLowerCase().includes(q) ||
-        t.position.toLowerCase().includes(q) ||
-        t.id.toLowerCase().includes(q)
-      );
-    }).slice(0, 100);
-  }, [search, beltFilter]);
+    return techniques
+      .filter((t) => {
+        if (beltFilter !== "all" && t.belt !== beltFilter) return false;
+        if (!q) return true;
+        return (
+          t.name.toLowerCase().includes(q) ||
+          t.shortDescription.toLowerCase().includes(q) ||
+          t.category.toLowerCase().includes(q) ||
+          t.position.toLowerCase().includes(q) ||
+          t.id.toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 100);
+  }, [search, beltFilter, techniques]);
 
   const selectedIds = useMemo(() => new Set(draftTechniques.map((t) => t.id)), [draftTechniques]);
   const filteredNotes = useMemo(() => {
