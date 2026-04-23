@@ -6,7 +6,7 @@ import { useColorScheme } from 'react-native';
 import 'react-native-reanimated';
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: '(tabs)', // This tells the router where your tabs live
 };
 
 export default function RootLayout() {
