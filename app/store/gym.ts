@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { GymTechniqueOverrides } from "../data/techniques";
+import type { GymTechniqueOverrides, Technique } from "../data/techniques";
 
 const DEFAULT_GYM_NAME = "My Gym";
 const DEFAULT_ACCENT_COLOR = "#C8102E";
@@ -33,8 +33,22 @@ export type GymScheduleClass = {
   className: string;
   instructor?: string;
   description?: string;
+  /** Technique ids covered as class focus. */
+  focusTechniqueIds?: string[];
   /** Sort order within the same weekday (lower = earlier in list). */
   displayOrder?: number;
+};
+
+export type GymSyncPayload = {
+  version: 1;
+  gymId: string;
+  gymName: string;
+  accentColor: string;
+  logoUrl?: string;
+  schedule: GymScheduleClass[];
+  techniqueOverrides: GymTechniqueOverrides;
+  customTechniques: Technique[];
+  updatedAt: string;
 };
 
 const DEFAULT_SCHEDULE: GymScheduleClass[] = [
@@ -105,12 +119,16 @@ function maxDisplayOrderForDay(schedule: GymScheduleClass[], day: GymDay): numbe
 }
 
 type GymState = {
+  gymId: string;
   gymName: string;
   accentColor: string;
   logoUrl?: string;
   isGymMode: boolean;
   schedule: GymScheduleClass[];
   techniqueOverrides: GymTechniqueOverrides;
+  customTechniques: Technique[];
+  linkedGym?: GymSyncPayload;
+  setGymId: (gymId: string) => void;
   setGymName: (gymName: string) => void;
   setAccentColor: (accentColor: string) => void;
   setLogoUrl: (logoUrl?: string) => void;
@@ -122,8 +140,54 @@ type GymState = {
   setTechniqueOverride: (techniqueId: string, patch: GymTechniqueOverrides[string]) => void;
   clearTechniqueOverride: (techniqueId: string) => void;
   clearAllTechniqueOverrides: () => void;
+  upsertCustomTechnique: (item: Technique) => void;
+  removeCustomTechnique: (id: string) => void;
+  buildGymShareCode: () => string;
+  joinGymFromShareCode: (shareCode: string) => { ok: true } | { ok: false; message: string };
+  leaveLinkedGym: () => void;
   resetGymSettings: () => void;
 };
+
+function createGymId(): string {
+  return `gym-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function parseShareCode(raw: string): GymSyncPayload | null {
+  const trimmed = raw.trim();
+  const payload = trimmed.startsWith("RQSYNC:")
+    ? trimmed.slice("RQSYNC:".length).trim()
+    : trimmed;
+  if (!payload) return null;
+  try {
+    const parsed = JSON.parse(payload) as Partial<GymSyncPayload>;
+    if (!parsed || parsed.version !== 1) return null;
+    if (
+      typeof parsed.gymId !== "string" ||
+      typeof parsed.gymName !== "string" ||
+      typeof parsed.accentColor !== "string" ||
+      !Array.isArray(parsed.schedule) ||
+      !parsed.techniqueOverrides ||
+      typeof parsed.techniqueOverrides !== "object" ||
+      !Array.isArray(parsed.customTechniques) ||
+      typeof parsed.updatedAt !== "string"
+    ) {
+      return null;
+    }
+    return {
+      version: 1,
+      gymId: parsed.gymId,
+      gymName: parsed.gymName,
+      accentColor: normalizeHexColor(parsed.accentColor),
+      logoUrl: typeof parsed.logoUrl === "string" && parsed.logoUrl.trim() ? parsed.logoUrl.trim() : undefined,
+      schedule: parsed.schedule as GymScheduleClass[],
+      techniqueOverrides: parsed.techniqueOverrides,
+      customTechniques: parsed.customTechniques as Technique[],
+      updatedAt: parsed.updatedAt,
+    };
+  } catch {
+    return null;
+  }
+}
 
 function normalizeHexColor(input: string): string {
   const trimmed = input.trim();
@@ -139,12 +203,19 @@ const emptyOverrides: GymTechniqueOverrides = {};
 export const useGymStore = create<GymState>()(
   persist(
     (set) => ({
+      gymId: createGymId(),
       gymName: DEFAULT_GYM_NAME,
       accentColor: DEFAULT_ACCENT_COLOR,
       logoUrl: undefined,
       isGymMode: false,
       schedule: DEFAULT_SCHEDULE,
       techniqueOverrides: emptyOverrides,
+      customTechniques: [],
+      linkedGym: undefined,
+      setGymId: (gymId) =>
+        set({
+          gymId: gymId.trim().length > 0 ? gymId.trim() : createGymId(),
+        }),
       setGymName: (gymName) =>
         set({
           gymName: gymName.trim().length > 0 ? gymName.trim() : DEFAULT_GYM_NAME,
@@ -224,32 +295,88 @@ export const useGymStore = create<GymState>()(
           return { techniqueOverrides: next };
         }),
       clearAllTechniqueOverrides: () => set({ techniqueOverrides: {} }),
+      upsertCustomTechnique: (item) =>
+        set((state) => {
+          const exists = state.customTechniques.some((t) => t.id === item.id);
+          if (exists) {
+            return {
+              customTechniques: state.customTechniques.map((t) => (t.id === item.id ? item : t)),
+            };
+          }
+          return {
+            customTechniques: [...state.customTechniques, item],
+          };
+        }),
+      removeCustomTechnique: (id) =>
+        set((state) => {
+          const removedIds = new Set([id]);
+          return {
+            customTechniques: state.customTechniques.filter((t) => !removedIds.has(t.id)),
+            schedule: state.schedule.map((cls) => ({
+              ...cls,
+              focusTechniqueIds: (cls.focusTechniqueIds ?? []).filter((techId) => !removedIds.has(techId)),
+            })),
+          };
+        }),
+      buildGymShareCode: () => {
+        const state = useGymStore.getState();
+        const payload: GymSyncPayload = {
+          version: 1,
+          gymId: state.gymId,
+          gymName: state.gymName,
+          accentColor: state.accentColor,
+          logoUrl: state.logoUrl,
+          schedule: state.schedule,
+          techniqueOverrides: state.techniqueOverrides,
+          customTechniques: state.customTechniques,
+          updatedAt: new Date().toISOString(),
+        };
+        return `RQSYNC:${JSON.stringify(payload)}`;
+      },
+      joinGymFromShareCode: (shareCode) => {
+        const parsed = parseShareCode(shareCode);
+        if (!parsed) {
+          return { ok: false as const, message: "That gym sync code is invalid." };
+        }
+        set({
+          linkedGym: parsed,
+        });
+        return { ok: true as const };
+      },
+      leaveLinkedGym: () => set({ linkedGym: undefined }),
       resetGymSettings: () =>
         set({
+          gymId: createGymId(),
           gymName: DEFAULT_GYM_NAME,
           accentColor: DEFAULT_ACCENT_COLOR,
           logoUrl: undefined,
           isGymMode: false,
           schedule: DEFAULT_SCHEDULE,
           techniqueOverrides: {},
+          customTechniques: [],
+          linkedGym: undefined,
         }),
     }),
     {
       name: "rollquest.gym.v1",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
+        gymId: state.gymId,
         gymName: state.gymName,
         accentColor: state.accentColor,
         logoUrl: state.logoUrl,
         isGymMode: state.isGymMode,
         schedule: state.schedule,
         techniqueOverrides: state.techniqueOverrides,
+        customTechniques: state.customTechniques,
+        linkedGym: state.linkedGym,
       }),
       merge: (persisted, current) => {
         if (!persisted || typeof persisted !== "object") return current;
         const p = persisted as Partial<GymState>;
         return {
           ...current,
+          gymId: typeof p.gymId === "string" && p.gymId.trim() ? p.gymId.trim() : current.gymId,
           gymName: typeof p.gymName === "string" && p.gymName.trim() ? p.gymName : current.gymName,
           accentColor: typeof p.accentColor === "string" ? normalizeHexColor(p.accentColor) : current.accentColor,
           logoUrl: typeof p.logoUrl === "string" && p.logoUrl.trim() ? p.logoUrl.trim() : undefined,
@@ -257,6 +384,11 @@ export const useGymStore = create<GymState>()(
           schedule: Array.isArray(p.schedule) ? p.schedule : current.schedule,
           techniqueOverrides:
             p.techniqueOverrides && typeof p.techniqueOverrides === "object" ? p.techniqueOverrides : {},
+          customTechniques: Array.isArray(p.customTechniques) ? p.customTechniques : [],
+          linkedGym:
+            p.linkedGym && typeof p.linkedGym === "object" && (p.linkedGym as GymSyncPayload).version === 1
+              ? (p.linkedGym as GymSyncPayload)
+              : undefined,
         };
       },
     }
