@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { POSITION_TABS, type PositionTab } from "../data/techniques";
 import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
@@ -17,6 +17,7 @@ export default function LibraryScreen() {
   const [activePosition, setActivePosition] = useState<PositionFilter>("All");
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
   const [libraryMode, setLibraryMode] = useState<LibraryMode>("all");
+  const [search, setSearch] = useState("");
 
   useFocusEffect(
     useCallback(() => {
@@ -38,10 +39,24 @@ export default function LibraryScreen() {
       source.filter(
         (item) =>
           (activePosition === "All" || item.position === activePosition) &&
-          (libraryMode === "learned" || item.belt === progress.currentBelt)
+          (libraryMode === "learned" || libraryMode === "mine" || item.belt === progress.currentBelt)
       ),
     [activePosition, libraryMode, progress.currentBelt, source]
   );
+  const searched = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return filtered;
+    return filtered.filter((item) =>
+      [
+        item.name,
+        item.position,
+        item.category,
+        item.shortDescription,
+        item.id,
+        item.belt,
+      ].some((field) => field.toLowerCase().includes(q))
+    );
+  }, [filtered, search]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["top"]}>
@@ -114,6 +129,22 @@ export default function LibraryScreen() {
           <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>Learned</Text>
         </Pressable>
       </View>
+      <TextInput
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search techniques by name, position, category..."
+        placeholderTextColor="#5D6574"
+        style={{
+          borderWidth: 1,
+          borderColor: "#2A2A2A",
+          borderRadius: 12,
+          backgroundColor: "#101010",
+          color: "#FFFFFF",
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+          fontSize: 16,
+        }}
+      />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
         {(["All", ...POSITION_TABS] as const).map((position) => {
@@ -150,7 +181,7 @@ export default function LibraryScreen() {
           {activePosition === "All" ? "All Positions" : activePosition}
         </Text>
         <Text style={{ color: "#9AA2B1", marginTop: 4 }}>
-          {filtered.length} technique{filtered.length === 1 ? "" : "s"} in{" "}
+          {searched.length} technique{searched.length === 1 ? "" : "s"} in{" "}
           {libraryMode === "mine"
             ? "My Library"
             : libraryMode === "learned"
@@ -160,7 +191,7 @@ export default function LibraryScreen() {
         </Text>
       </View>
 
-      {filtered.map((tech) => {
+      {searched.map((tech) => {
         const mastered = progress.learnedTechniqueIds.includes(tech.id);
         return (
           <Pressable
@@ -187,7 +218,7 @@ export default function LibraryScreen() {
         );
       })}
 
-      {filtered.length === 0 ? (
+      {searched.length === 0 ? (
         <View
           style={{
             borderWidth: 1,
@@ -199,7 +230,7 @@ export default function LibraryScreen() {
         >
           <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>No techniques in this tab yet.</Text>
           <Text style={{ color: "#8E96A5", marginTop: 4 }}>
-            Add techniques from the All list to My Library, or switch belt above to see the full curriculum.
+            Try adjusting your search, filters, or belt selection to find the technique.
           </Text>
         </View>
       ) : null}
