@@ -2,7 +2,8 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-rou
 import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getTechniqueById } from "../data/techniques";
+import type { Technique } from "../data/techniques";
+import { useResolvedTechniqueById } from "../hooks/useResolvedTechniques";
 import { useGymStore, withAlpha } from "../store/gym";
 import { loadNotes, type SessionNote } from "../store/notes";
 import {
@@ -17,7 +18,7 @@ export default function TechniqueDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
-  const technique = getTechniqueById(id ?? "");
+  const technique = useResolvedTechniqueById(id ?? "");
 
   useEffect(() => {
     void loadProgress().then(setProgress);
@@ -64,7 +65,7 @@ function TechniqueBody({
   onProgressChange,
   onOpenNotes,
 }: {
-  technique: NonNullable<ReturnType<typeof getTechniqueById>>;
+  technique: Technique;
   progress: UserProgress;
   onProgressChange: (p: UserProgress) => void;
   onOpenNotes: () => void;
