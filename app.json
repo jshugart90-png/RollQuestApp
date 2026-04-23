@@ -37,6 +37,12 @@
         }
       ],
       [
+        "expo-camera",
+        {
+          "cameraPermission": "RollQuest uses your camera to scan gym sync QR codes."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

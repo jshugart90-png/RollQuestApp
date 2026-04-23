@@ -2,6 +2,7 @@ import { Core_WHITE_TECHNIQUES } from "./core.white";
 import { Core_BLUE_TECHNIQUES } from "./core.blue";
 import { Core_PURPLE_TECHNIQUES } from "./core.purple";
 import { Core_BROWN_TECHNIQUES } from "./core.brown";
+import { REQUESTED_TECHNIQUES } from "./requested-techniques";
 
 export type PositionTab =
   | "Takedowns & Standing"
@@ -70,6 +71,7 @@ export const ALL_TECHNIQUES: Technique[] = [
   ...Core_BLUE_TECHNIQUES,
   ...Core_PURPLE_TECHNIQUES,
   ...Core_BROWN_TECHNIQUES,
+  ...REQUESTED_TECHNIQUES,
 ];
 
 /**

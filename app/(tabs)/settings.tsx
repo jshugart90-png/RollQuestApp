@@ -1,6 +1,7 @@
 import { Link } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import { Alert, Modal, Pressable, ScrollView, Switch, Text, TextInput, TouchableWithoutFeedback, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGymStore, withAlpha } from "../store/gym";
 
@@ -31,6 +32,9 @@ export default function SettingsScreen() {
   const [nameInput, setNameInput] = useState(gymName);
   const [colorInput, setColorInput] = useState(accentColor);
   const [syncInput, setSyncInput] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [isHandlingScan, setIsHandlingScan] = useState(false);
 
   const modeLabel = useMemo(() => (isGymMode ? "Gym owner mode" : "Personal mode"), [isGymMode]);
   function onJoinGym() {
@@ -40,6 +44,31 @@ export default function SettingsScreen() {
       return;
     }
     setSyncInput("");
+    Alert.alert("Gym synced", "You are now linked to this gym's schedule and curriculum.");
+  }
+  async function onOpenScanner() {
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (!result.granted) {
+        Alert.alert("Camera permission needed", "Enable camera permission to scan gym QR codes.");
+        return;
+      }
+    }
+    setIsHandlingScan(false);
+    setScanOpen(true);
+  }
+
+  function onScanPayload(payload: string) {
+    if (isHandlingScan) return;
+    setIsHandlingScan(true);
+    const result = joinGymFromShareCode(payload);
+    if (!result.ok) {
+      Alert.alert("Could not join gym", result.message);
+      setIsHandlingScan(false);
+      return;
+    }
+    setSyncInput("");
+    setScanOpen(false);
     Alert.alert("Gym synced", "You are now linked to this gym's schedule and curriculum.");
   }
 
@@ -208,8 +237,21 @@ export default function SettingsScreen() {
           >
             <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>Join a gym</Text>
             <Text style={{ color: "#8E96A5", lineHeight: 20 }}>
-              Paste your coach&apos;s gym sync code to load that gym&apos;s branding, schedule, and custom moves.
+              Scan your coach&apos;s gym QR code, or paste a manual sync code.
             </Text>
+            <Pressable
+              onPress={() => void onOpenScanner()}
+              style={{
+                borderRadius: 10,
+                paddingVertical: 10,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: withAlpha("#D4B06A", 0.75),
+                backgroundColor: "rgba(212,176,106,0.14)",
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Scan gym QR</Text>
+            </Pressable>
             <TextInput
               value={syncInput}
               onChangeText={setSyncInput}
@@ -291,6 +333,53 @@ export default function SettingsScreen() {
           </Text>
         </Pressable>
       </ScrollView>
+
+      <Modal transparent visible={scanOpen} animationType="fade">
+        <View style={{ flex: 1 }}>
+          <TouchableWithoutFeedback onPress={() => setScanOpen(false)}>
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.75)" }} />
+          </TouchableWithoutFeedback>
+          <View
+            style={{
+              marginTop: 70,
+              marginHorizontal: 16,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: "#2A2A2A",
+              overflow: "hidden",
+              backgroundColor: "#0E0E0E",
+            }}
+          >
+            <View style={{ padding: 12, gap: 4 }}>
+              <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "900" }}>Scan gym QR</Text>
+              <Text style={{ color: "#8E96A5" }}>Center the QR code in view to join the gym.</Text>
+            </View>
+            <View style={{ height: 360 }}>
+              <CameraView
+                style={{ flex: 1 }}
+                facing="back"
+                barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+                onBarcodeScanned={({ data }) => onScanPayload(data)}
+              />
+            </View>
+            <View style={{ padding: 12 }}>
+              <Pressable
+                onPress={() => setScanOpen(false)}
+                style={{
+                  borderRadius: 10,
+                  paddingVertical: 10,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: "#333",
+                  backgroundColor: "#151515",
+                }}
+              >
+                <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>Close scanner</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
