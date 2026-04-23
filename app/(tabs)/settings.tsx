@@ -1,6 +1,6 @@
 import { Link } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGymStore, withAlpha } from "../store/gym";
 
@@ -23,12 +23,25 @@ export default function SettingsScreen() {
     setGymName,
     setAccentColor,
     setIsGymMode,
+    linkedGym,
+    joinGymFromShareCode,
+    leaveLinkedGym,
     resetGymSettings,
   } = useGymStore();
   const [nameInput, setNameInput] = useState(gymName);
   const [colorInput, setColorInput] = useState(accentColor);
+  const [syncInput, setSyncInput] = useState("");
 
   const modeLabel = useMemo(() => (isGymMode ? "Gym owner mode" : "Personal mode"), [isGymMode]);
+  function onJoinGym() {
+    const result = joinGymFromShareCode(syncInput);
+    if (!result.ok) {
+      Alert.alert("Could not join gym", result.message);
+      return;
+    }
+    setSyncInput("");
+    Alert.alert("Gym synced", "You are now linked to this gym's schedule and curriculum.");
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["top"]}>
@@ -180,6 +193,85 @@ export default function SettingsScreen() {
               <Text style={{ color: "#AAB2C2", marginTop: 4 }}>Logo, weekly schedule, and curriculum overrides.</Text>
             </Pressable>
           </Link>
+        ) : null}
+
+        {!isGymMode ? (
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: "#222",
+              backgroundColor: "#101010",
+              borderRadius: 14,
+              padding: 14,
+              gap: 10,
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>Join a gym</Text>
+            <Text style={{ color: "#8E96A5", lineHeight: 20 }}>
+              Paste your coach&apos;s gym sync code to load that gym&apos;s branding, schedule, and custom moves.
+            </Text>
+            <TextInput
+              value={syncInput}
+              onChangeText={setSyncInput}
+              placeholder="Paste RQSYNC code..."
+              placeholderTextColor="#5D6574"
+              multiline
+              style={{
+                minHeight: 90,
+                borderWidth: 1,
+                borderColor: "#2A2A2A",
+                borderRadius: 10,
+                backgroundColor: "#0F0F0F",
+                color: "#FFFFFF",
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                textAlignVertical: "top",
+              }}
+            />
+            <Pressable
+              onPress={onJoinGym}
+              style={{
+                borderRadius: 10,
+                paddingVertical: 10,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: withAlpha(accentColor, 0.75),
+                backgroundColor: withAlpha(accentColor, 0.2),
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Sync gym</Text>
+            </Pressable>
+            {linkedGym ? (
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#2A2A2A",
+                  backgroundColor: "#0D0D0D",
+                  borderRadius: 10,
+                  padding: 10,
+                  gap: 6,
+                }}
+              >
+                <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>Connected gym: {linkedGym.gymName}</Text>
+                <Text style={{ color: "#8E96A5", fontSize: 12 }}>Gym ID: {linkedGym.gymId}</Text>
+                <Pressable
+                  onPress={leaveLinkedGym}
+                  style={{
+                    alignSelf: "flex-start",
+                    marginTop: 4,
+                    borderWidth: 1,
+                    borderColor: "#5A1F1F",
+                    borderRadius: 8,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    backgroundColor: "#2A1111",
+                  }}
+                >
+                  <Text style={{ color: "#FFD6D6", fontWeight: "700" }}>Leave synced gym</Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
         ) : null}
 
         <Pressable
