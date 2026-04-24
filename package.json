@@ -8,7 +8,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "save:github": "node ./scripts/save-to-github.mjs",
+    "sync:github": "node ./scripts/sync-github.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
