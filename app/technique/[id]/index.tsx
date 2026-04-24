@@ -2,17 +2,17 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-rou
 import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import type { Technique } from "../data/techniques";
-import { useResolvedTechniqueById } from "../hooks/useResolvedTechniques";
-import { useGymStore, withAlpha } from "../store/gym";
-import { loadNotes, type SessionNote } from "../store/notes";
+import type { Technique } from "../../data/techniques";
+import { useResolvedTechniqueById } from "../../hooks/useResolvedTechniques";
+import { useGymStore, withAlpha } from "../../store/gym";
+import { loadNotes, type SessionNote } from "../../store/notes";
 import {
   addToMyLibrary,
   defaultProgress,
   loadProgress,
   toggleLearnedTechnique,
   type UserProgress,
-} from "../store/progress";
+} from "../../store/progress";
 
 export default function TechniqueDetailScreen() {
   const router = useRouter();
