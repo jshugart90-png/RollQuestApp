@@ -6,7 +6,9 @@ node_modules/
 # Expo
 .expo/
 dist/
+dist-check/
 web-build/
+null.txt
 expo-env.d.ts
 
 # Native

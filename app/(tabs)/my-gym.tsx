@@ -1,3 +1,4 @@
+import type { Href } from "expo-router";
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from "react-native";
@@ -232,7 +233,7 @@ export default function MyGymScreen() {
         </View>
 
         <Pressable
-          onPress={() => router.push("/gym-curriculum")}
+          onPress={() => router.push("/gym-curriculum" as Href)}
           style={{
             borderWidth: 1,
             borderColor: withAlpha("#D4B06A", 0.55),

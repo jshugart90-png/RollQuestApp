@@ -1,3 +1,4 @@
+import type { Href } from "expo-router";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -59,7 +60,7 @@ export default function GymCurriculumIndex() {
           return (
             <Pressable
               key={t.id}
-              onPress={() => router.push(`/gym-curriculum/${t.id}`)}
+              onPress={() => router.push(`/gym-curriculum/${t.id}` as Href)}
               style={{
                 borderWidth: 1,
                 borderColor: touched ? withAlpha(accentColor, 0.55) : "#242424",
