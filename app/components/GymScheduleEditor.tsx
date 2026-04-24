@@ -1,20 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, TextInput, TouchableWithoutFeedback, View } from "react-native";
-import { NestableDraggableFlatList, ScaleDecorator } from "react-native-draggable-flatlist";
 import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
 import type { GymDay, GymScheduleClass } from "../store/gym";
 import { WEEK_DAYS, withAlpha } from "../store/gym";
-
-function sortClassesForDay(schedule: GymScheduleClass[], day: GymDay): GymScheduleClass[] {
-  return schedule
-    .filter((c) => c.day === day)
-    .sort((a, b) => {
-      const oa = a.displayOrder ?? 1_000_000;
-      const ob = b.displayOrder ?? 1_000_000;
-      if (oa !== ob) return oa - ob;
-      return a.time.localeCompare(b.time, undefined, { numeric: true });
-    });
-}
 
 type Props = {
   accentColor: string;
@@ -410,90 +398,6 @@ export function GymScheduleEditor({
           ))}
         </View>
 
-        {WEEK_DAYS.map((day) => {
-          const data = sortClassesForDay(schedule, day);
-          return (
-            <View key={day} style={{ gap: 8 }}>
-              <View
-                style={{
-                  borderWidth: 1,
-                  borderColor: withAlpha(accentColor, 0.45),
-                  backgroundColor: withAlpha(accentColor, 0.1),
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                }}
-              >
-                <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 15 }}>{day}</Text>
-                <Text style={{ color: "#AAB2C2", fontSize: 12, marginTop: 2 }}>
-                  Long press a card to drag · {data.length} class{data.length === 1 ? "" : "es"}
-                </Text>
-              </View>
-
-              {data.length === 0 ? (
-                <View
-                  style={{
-                    borderWidth: 1,
-                    borderColor: "#222",
-                    borderRadius: 12,
-                    backgroundColor: "#0E0E0E",
-                    padding: 12,
-                  }}
-                >
-                  <Text style={{ color: "#8E96A5" }}>No classes — use the form above to add one.</Text>
-                </View>
-              ) : (
-                <NestableDraggableFlatList
-                  data={data}
-                  keyExtractor={(item) => item.id}
-                  scrollEnabled={false}
-                  style={{ minHeight: Math.max(88, data.length * 124) }}
-                  activationDistance={14}
-                  autoscrollSpeed={0}
-                  autoscrollThreshold={0}
-                  onDragBegin={() => onDragStateChange?.(true)}
-                  onRelease={() => onDragStateChange?.(false)}
-                  onDragEnd={({ data: next }) => {
-                    onDragStateChange?.(false);
-                    reorderScheduleForDay(day, next.map((c) => c.id));
-                  }}
-                  renderItem={({ item, drag, isActive }) => (
-                    <ScaleDecorator>
-                      <Pressable
-                        onLongPress={drag}
-                        delayLongPress={120}
-                        style={{
-                          marginBottom: 8,
-                          borderWidth: 1,
-                          borderColor: isActive ? accentColor : "#2A2A2A",
-                          borderRadius: 12,
-                          backgroundColor: "#111",
-                          padding: 12,
-                          opacity: isActive ? 0.92 : 1,
-                        }}
-                      >
-                        <Text style={{ color: accentColor, fontWeight: "900", fontSize: 13 }}>{item.time}</Text>
-                        <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "900" }}>{item.className}</Text>
-                        {item.instructor ? (
-                          <Text style={{ color: "#D4B06A", marginTop: 4 }}>Instructor: {item.instructor}</Text>
-                        ) : null}
-                        {item.description ? (
-                          <Text style={{ color: "#AAB2C2", marginTop: 4, lineHeight: 18 }}>{item.description}</Text>
-                        ) : null}
-                        {(item.focusTechniqueIds ?? []).length > 0 ? (
-                          <Text style={{ color: "#D4B06A", fontSize: 12, marginTop: 4 }}>
-                            Focus: {(item.focusTechniqueIds ?? []).map((id) => techniqueNameById.get(id) ?? id).join(" · ")}
-                          </Text>
-                        ) : null}
-                        <Text style={{ color: "#5D6574", fontSize: 11, marginTop: 8 }}>Long press to reorder</Text>
-                      </Pressable>
-                    </ScaleDecorator>
-                  )}
-                />
-              )}
-            </View>
-          );
-        })}
       </View>
 
       <Modal transparent visible={dupSourceId !== null} animationType="fade">

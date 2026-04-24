@@ -15,8 +15,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { type Technique } from "../data/techniques";
 import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
+import { useAssignmentsStore } from "../store/assignments";
 import { useGymStore, withAlpha } from "../store/gym";
-import { addMultipleToMyLibrary } from "../store/progress";
+import { addMultipleToMyLibrary, loadProgress } from "../store/progress";
 import {
   addNote,
   deleteNote,
@@ -56,11 +57,16 @@ export default function NotesScreen() {
   const [beltFilter, setBeltFilter] = useState<BeltFilter>("all");
   const [addToMyLibrary, setAddToMyLibrary] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [profileName, setProfileName] = useState("Student");
+  const assignments = useAssignmentsStore((state) => state.assignments);
+  const toggleAssignmentCompletion = useAssignmentsStore((state) => state.toggleAssignmentCompletion);
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
+      const progress = await loadProgress();
       const list = await loadNotes();
+      setProfileName(progress.profileName);
       setNotes(list);
     } finally {
       setLoading(false);
@@ -96,6 +102,19 @@ export default function NotesScreen() {
     if (!techniqueId) return notes;
     return notes.filter((note) => note.techniques.some((tech) => tech.id === techniqueId));
   }, [notes, techniqueId]);
+  const assignmentCards = useMemo(
+    () =>
+      assignments.map((assignment) => {
+        const done = (assignment.completedBy ?? []).includes(profileName);
+        const linkedTechniques = (assignment.linkedTechniqueIds ?? [])
+          .map((id) => techniques.find((item) => item.id === id))
+          .filter((item): item is Technique => Boolean(item));
+        return { assignment, done, linkedTechniques };
+      }),
+    [assignments, profileName, techniques]
+  );
+  const pendingAssignments = assignmentCards.filter((item) => !item.done);
+  const completedAssignments = assignmentCards.filter((item) => item.done);
 
   function openNew() {
     setEditingId(null);
@@ -192,6 +211,60 @@ export default function NotesScreen() {
         >
           <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>+ New class note</Text>
         </Pressable>
+
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "#222",
+            borderRadius: 14,
+            backgroundColor: "#0F0F0F",
+            padding: 14,
+            gap: 10,
+          }}
+        >
+          <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900" }}>My Assignments</Text>
+          <Text style={{ color: "#AAB2C2" }}>
+            Student: <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>{profileName}</Text>
+          </Text>
+          {assignmentCards.length === 0 ? (
+            <Text style={{ color: "#8E96A5" }}>No assignments posted yet by your gym.</Text>
+          ) : (
+            <>
+              <Text style={{ color: "#D4B06A", fontWeight: "800" }}>Pending</Text>
+              {pendingAssignments.length === 0 ? (
+                <Text style={{ color: "#8E96A5" }}>All assignments completed. Nice work.</Text>
+              ) : (
+                pendingAssignments.map(({ assignment, linkedTechniques }) => (
+                  <AssignmentCard
+                    key={assignment.id}
+                    assignment={assignment}
+                    linkedTechniques={linkedTechniques}
+                    accentColor={accentColor}
+                    done={false}
+                    onToggle={() => toggleAssignmentCompletion(assignment.id, profileName)}
+                    onOpenTechnique={(id) => router.push(`/technique/${id}`)}
+                  />
+                ))
+              )}
+              <Text style={{ color: "#8E96A5", marginTop: 6, fontWeight: "800" }}>Completed</Text>
+              {completedAssignments.length === 0 ? (
+                <Text style={{ color: "#8E96A5" }}>No completed assignments yet.</Text>
+              ) : (
+                completedAssignments.map(({ assignment, linkedTechniques }) => (
+                  <AssignmentCard
+                    key={assignment.id}
+                    assignment={assignment}
+                    linkedTechniques={linkedTechniques}
+                    accentColor={accentColor}
+                    done
+                    onToggle={() => toggleAssignmentCompletion(assignment.id, profileName)}
+                    onOpenTechnique={(id) => router.push(`/technique/${id}`)}
+                  />
+                ))
+              )}
+            </>
+          )}
+        </View>
 
         {techniqueId ? (
           <View
@@ -530,5 +603,71 @@ export default function NotesScreen() {
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
+  );
+}
+
+function AssignmentCard({
+  assignment,
+  linkedTechniques,
+  accentColor,
+  done,
+  onToggle,
+  onOpenTechnique,
+}: {
+  assignment: { id: string; title: string; description: string; dueDate?: string; linkedTechniqueIds?: string[] };
+  linkedTechniques: Technique[];
+  accentColor: string;
+  done: boolean;
+  onToggle: () => void;
+  onOpenTechnique: (id: string) => void;
+}) {
+  return (
+    <View
+      style={{
+        borderWidth: 1,
+        borderColor: done ? withAlpha("#47B96E", 0.95) : "#2A2A2A",
+        backgroundColor: done ? "rgba(71,185,110,0.1)" : "#111",
+        borderRadius: 12,
+        padding: 12,
+        gap: 8,
+      }}
+    >
+      <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{assignment.title}</Text>
+      <Text style={{ color: "#C2C9D8" }}>{assignment.description}</Text>
+      {assignment.dueDate ? <Text style={{ color: "#8E96A5", fontSize: 12 }}>Due: {assignment.dueDate}</Text> : null}
+      {linkedTechniques.length > 0 ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {linkedTechniques.map((technique) => (
+            <Pressable
+              key={`${assignment.id}-${technique.id}`}
+              onPress={() => onOpenTechnique(technique.id)}
+              style={{
+                borderWidth: 1,
+                borderColor: "#2A2A2A",
+                borderRadius: 999,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                backgroundColor: "#191919",
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 12 }}>{technique.name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+      <Pressable
+        onPress={onToggle}
+        style={{
+          borderWidth: 1,
+          borderColor: done ? "#2E7A48" : accentColor,
+          borderRadius: 10,
+          paddingVertical: 9,
+          alignItems: "center",
+          backgroundColor: done ? "rgba(46,122,72,0.35)" : withAlpha(accentColor, 0.2),
+        }}
+      >
+        <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>{done ? "Mark as Pending" : "Mark as Completed"}</Text>
+      </Pressable>
+    </View>
   );
 }

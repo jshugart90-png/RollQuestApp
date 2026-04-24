@@ -128,6 +128,7 @@ type GymState = {
   techniqueOverrides: GymTechniqueOverrides;
   customTechniques: Technique[];
   linkedGym?: GymSyncPayload;
+  myGymTileOrder: string[];
   setGymId: (gymId: string) => void;
   setGymName: (gymName: string) => void;
   setAccentColor: (accentColor: string) => void;
@@ -145,6 +146,7 @@ type GymState = {
   buildGymShareCode: () => string;
   joinGymFromShareCode: (shareCode: string) => { ok: true } | { ok: false; message: string };
   leaveLinkedGym: () => void;
+  setMyGymTileOrder: (order: string[]) => void;
   resetGymSettings: () => void;
 };
 
@@ -212,6 +214,7 @@ export const useGymStore = create<GymState>()(
       techniqueOverrides: emptyOverrides,
       customTechniques: [],
       linkedGym: undefined,
+      myGymTileOrder: ["logo", "curriculum", "qr", "customMoves", "schedule", "assignments", "roster", "completion"],
       setGymId: (gymId) =>
         set({
           gymId: gymId.trim().length > 0 ? gymId.trim() : createGymId(),
@@ -344,6 +347,7 @@ export const useGymStore = create<GymState>()(
         return { ok: true as const };
       },
       leaveLinkedGym: () => set({ linkedGym: undefined }),
+      setMyGymTileOrder: (order) => set({ myGymTileOrder: order }),
       resetGymSettings: () =>
         set({
           gymId: createGymId(),
@@ -355,6 +359,7 @@ export const useGymStore = create<GymState>()(
           techniqueOverrides: {},
           customTechniques: [],
           linkedGym: undefined,
+          myGymTileOrder: ["logo", "curriculum", "qr", "customMoves", "schedule", "assignments", "roster", "completion"],
         }),
     }),
     {
@@ -370,6 +375,7 @@ export const useGymStore = create<GymState>()(
         techniqueOverrides: state.techniqueOverrides,
         customTechniques: state.customTechniques,
         linkedGym: state.linkedGym,
+        myGymTileOrder: state.myGymTileOrder,
       }),
       merge: (persisted, current) => {
         if (!persisted || typeof persisted !== "object") return current;
@@ -389,6 +395,9 @@ export const useGymStore = create<GymState>()(
             p.linkedGym && typeof p.linkedGym === "object" && (p.linkedGym as GymSyncPayload).version === 1
               ? (p.linkedGym as GymSyncPayload)
               : undefined,
+          myGymTileOrder: Array.isArray(p.myGymTileOrder)
+            ? p.myGymTileOrder.filter((id): id is string => typeof id === "string")
+            : current.myGymTileOrder,
         };
       },
     }

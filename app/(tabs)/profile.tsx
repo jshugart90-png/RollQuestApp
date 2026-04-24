@@ -1,10 +1,11 @@
 import type { Href } from "expo-router";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
+import { useAssignmentsStore } from "../store/assignments";
 import { useGymStore, withAlpha } from "../store/gym";
 import {
   CURRICULUM_BELTS,
@@ -13,6 +14,7 @@ import {
   markTechniqueReviewed,
   toggleDailyTaskCompleted,
   updateCurrentBelt,
+  updateProfileName,
   type BeltLevel,
   type UserProgress,
 } from "../store/progress";
@@ -27,16 +29,27 @@ export default function ProfileScreen() {
   const linkedGym = useGymStore((state) => state.linkedGym);
   const gymName = useGymStore((state) => state.gymName);
   const techniques = useResolvedTechniques();
+  const assignments = useAssignmentsStore((state) => state.assignments);
+  const [draftProfileName, setDraftProfileName] = useState("Student");
 
   useFocusEffect(
     React.useCallback(() => {
-      void loadProgress().then(setProgress);
+      void loadProgress().then((loaded) => {
+        setProgress(loaded);
+        setDraftProfileName(loaded.profileName);
+      });
     }, [])
   );
 
   async function onSelectBelt(belt: BeltLevel) {
     const updated = await updateCurrentBelt(belt);
     setProgress(updated);
+  }
+
+  async function onSaveProfileName() {
+    const updated = await updateProfileName(draftProfileName);
+    setProgress(updated);
+    setDraftProfileName(updated.profileName);
   }
 
   const totalForBelt = useMemo(
@@ -89,6 +102,8 @@ export default function ProfileScreen() {
 
   const reviewPastMaterial = reviewPriority.slice(0, 5);
   const activeGymName = isGymMode ? gymName : linkedGym?.gymName;
+  const completedAssignments = assignments.filter((item) => (item.completedBy ?? []).includes(progress.profileName)).length;
+  const pendingAssignments = Math.max(0, assignments.length - completedAssignments);
 
   async function onToggleTask(task: DailyTask) {
     const wasDone = completedToday.includes(task.id);
@@ -110,6 +125,41 @@ export default function ProfileScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14 }}>
         <Text style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "900" }}>Profile</Text>
         <Text style={{ color: "#AAB2C2" }}>Build your game daily and stack the reps.</Text>
+
+        <View style={card}>
+          <Text style={{ color: "#8E96A5", fontWeight: "700" }}>Profile Name</Text>
+          <TextInput
+            value={draftProfileName}
+            onChangeText={setDraftProfileName}
+            placeholder="Student name"
+            placeholderTextColor="#6F7786"
+            style={{
+              marginTop: 8,
+              borderWidth: 1,
+              borderColor: "#2A2A2A",
+              borderRadius: 10,
+              backgroundColor: "#0F0F0F",
+              color: "#FFFFFF",
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              fontSize: 16,
+            }}
+          />
+          <Pressable
+            onPress={() => void onSaveProfileName()}
+            style={{
+              marginTop: 10,
+              borderWidth: 1,
+              borderColor: withAlpha(accentColor, 0.8),
+              backgroundColor: withAlpha(accentColor, 0.2),
+              borderRadius: 10,
+              paddingVertical: 10,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>Save Name</Text>
+          </Pressable>
+        </View>
 
         <View style={card}>
           <Text style={{ color: "#8E96A5" }}>Dashboard</Text>
@@ -221,6 +271,8 @@ export default function ProfileScreen() {
             <StatRow label="Techniques Mastered" value={String(progress.learnedTechniqueIds.length)} />
             <StatRow label="My Library Total" value={String(progress.myTechniques.length)} />
             <StatRow label="Current Streak" value={`${progress.streakCount} days`} />
+            <StatRow label="Assignments Pending" value={String(pendingAssignments)} />
+            <StatRow label="Assignments Completed" value={String(completedAssignments)} />
           </View>
         </View>
 

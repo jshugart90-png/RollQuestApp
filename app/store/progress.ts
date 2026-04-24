@@ -6,6 +6,7 @@ const LEGACY_MY_TECHNIQUES_KEY = "rollquest.myTechniques.v1";
 export type BeltLevel = "white" | "blue" | "purple" | "brown" | "black";
 
 export type UserProgress = {
+  profileName: string;
   currentBelt: BeltLevel;
   /** @deprecated Use streakCount instead. */
   streakDays: number;
@@ -21,6 +22,7 @@ export type UserProgress = {
 };
 
 export const defaultProgress: UserProgress = {
+  profileName: "Student",
   currentBelt: "white",
   streakDays: 3,
   streakCount: 3,
@@ -75,6 +77,7 @@ export async function loadProgress(): Promise<UserProgress> {
     return {
       ...defaultProgress,
       ...parsed,
+      profileName: typeof parsed.profileName === "string" && parsed.profileName.trim().length > 0 ? parsed.profileName : "Student",
       currentBelt: curriculumBelt,
       streakCount: normalizedStreak,
       streakDays: normalizedStreak,
@@ -119,6 +122,14 @@ export async function updateCurrentBelt(currentBelt: BeltLevel): Promise<UserPro
   const progress = await loadProgress();
   const belt = (CURRICULUM_BELTS as readonly string[]).includes(currentBelt) ? currentBelt : defaultProgress.currentBelt;
   const updated = { ...progress, currentBelt: belt };
+  await saveProgress(updated);
+  return updated;
+}
+
+export async function updateProfileName(profileName: string): Promise<UserProgress> {
+  const progress = await loadProgress();
+  const trimmed = profileName.trim();
+  const updated = { ...progress, profileName: trimmed.length > 0 ? trimmed : "Student" };
   await saveProgress(updated);
   return updated;
 }
