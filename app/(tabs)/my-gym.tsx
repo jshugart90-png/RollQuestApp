@@ -1,5 +1,5 @@
 import type { Href } from "expo-router";
-import { Link, useRouter } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
@@ -30,6 +30,7 @@ const DEFAULT_TILE_ORDER: TileId[] = [
 ];
 
 export default function MyGymScreen() {
+  const { newAssignment } = useLocalSearchParams<{ newAssignment?: string }>();
   const router = useRouter();
   const isGymMode = useGymStore((s) => s.isGymMode);
   const accentColor = useGymStore((s) => s.accentColor);
@@ -83,6 +84,17 @@ export default function MyGymScreen() {
   React.useEffect(() => {
     void loadProgress().then((progress) => setMyLibraryIds(progress.myTechniques));
   }, []);
+
+  React.useEffect(() => {
+    if (newAssignment === "1") {
+      setEditingAssignmentId(null);
+      setAssignmentTitle("");
+      setAssignmentDescription("");
+      setAssignmentDueDate("");
+      setAssignmentTechniqueSearch("");
+      setAssignmentTechniqueIds([]);
+    }
+  }, [newAssignment]);
 
   const ownerTechniqueChoices = resolvedTechniques.filter((technique) => {
     if (myLibraryIds.length > 0 && !myLibraryIds.includes(technique.id)) return false;

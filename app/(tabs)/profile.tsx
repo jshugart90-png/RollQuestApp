@@ -1,16 +1,18 @@
 import type { Href } from "expo-router";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useMemo, useRef, useState } from "react";
-import { Animated, Easing, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Animated, Easing, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
+import { useAssignmentsStore } from "../store/assignments";
 import { useGymStore, withAlpha } from "../store/gym";
 import {
   CURRICULUM_BELTS,
   defaultProgress,
   loadProgress,
   markTechniqueReviewed,
+  rateTechniqueRecall,
   toggleDailyTaskCompleted,
   updateCurrentBelt,
   updateProfileName,
@@ -32,6 +34,8 @@ export default function ProfileScreen() {
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
   const [draftProfileName, setDraftProfileName] = useState("Student");
   const [celebrationText, setCelebrationText] = useState("");
+  const [reviewSessionOpen, setReviewSessionOpen] = useState(false);
+  const [reviewIndex, setReviewIndex] = useState(0);
   const celebrationAnim = useRef(new Animated.Value(0)).current;
   const streakPulseAnim = useRef(new Animated.Value(0)).current;
   const previousStreakRef = useRef(defaultProgress.streakCount);
@@ -42,6 +46,7 @@ export default function ProfileScreen() {
   const linkedGym = useGymStore((state) => state.linkedGym);
   const gymName = useGymStore((state) => state.gymName);
   const techniques = useResolvedTechniques();
+  const assignments = useAssignmentsStore((state) => state.assignments);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -115,7 +120,12 @@ export default function ProfileScreen() {
     (technique) => technique.belt === progress.currentBelt && !progress.learnedTechniqueIds.includes(technique.id)
   );
   const dailyWarmups = selectDailyWarmups(todayKey);
-  const dailyTechniqueDrills = selectDailyTechniqueDrills(reviewPriority, unmasteredCurrentBelt);
+  const myPendingAssignments = assignments.filter((item) => !(item.completedBy ?? []).includes(progress.profileName));
+  const assignmentRecommended = myPendingAssignments
+    .flatMap((assignment) => assignment.linkedTechniqueIds ?? [])
+    .map((id) => techniques.find((technique) => technique.id === id))
+    .filter((technique): technique is (typeof techniques)[number] => Boolean(technique));
+  const dailyTechniqueDrills = selectDailyTechniqueDrills(assignmentRecommended, reviewPriority, unmasteredCurrentBelt);
 
   const todayMissionTasks: DailyTask[] = [
     ...dailyWarmups.map((label, idx) => ({ id: `warmup-${todayKey}-${idx}`, label, type: "warmup" as const })),
@@ -128,6 +138,17 @@ export default function ProfileScreen() {
   ].slice(0, 4);
 
   const readyForReview = reviewPriority.slice(0, 6);
+  const reviewQueue = useMemo(() => {
+    const candidates = candidateTechniques.map((technique) => {
+      const days = daysSince(progress.lastReviewedByTechniqueId[technique.id]);
+      const strength = progress.reviewStrengthByTechniqueId[technique.id] ?? 2;
+      const targetInterval = 2 + strength * 2;
+      const overdue = Math.max(0, days - targetInterval);
+      const score = overdue * 2 + days + (5 - strength) * 3;
+      return { technique, days, strength, score };
+    });
+    return candidates.sort((a, b) => b.score - a.score);
+  }, [candidateTechniques, progress.lastReviewedByTechniqueId, progress.reviewStrengthByTechniqueId]);
 
   const favoritePosition = useMemo(() => {
     const preferredIds = [...new Set([...progress.myTechniques, ...progress.learnedTechniqueIds])];
@@ -168,6 +189,21 @@ export default function ProfileScreen() {
     previousStreakRef.current = updated.streakCount;
     setProgress(updated);
     router.push(`/technique/${techniqueId}` as Href);
+  }
+
+  async function onRateRecall(techniqueId: string, remembered: boolean) {
+    const updated = await rateTechniqueRecall(techniqueId, remembered);
+    if (updated.streakCount > progress.streakCount) {
+      triggerStreakCelebration(updated.streakCount);
+    }
+    previousStreakRef.current = updated.streakCount;
+    setProgress(updated);
+    if (remembered) {
+      triggerCelebration("Locked in. Your recall strength just improved.");
+    } else {
+      triggerCelebration("Noted. We will bring this one back sooner.");
+    }
+    setReviewIndex((idx) => Math.min(idx + 1, Math.max(0, reviewQueue.length - 1)));
   }
 
   function triggerCelebration(message: string) {
@@ -276,7 +312,7 @@ export default function ProfileScreen() {
             },
           ]}
         >
-          <Text style={{ color: "#FFFFFF", fontSize: 36, fontWeight: "900" }}>🔥🔥 {progress.streakCount} Day Streak</Text>
+          <Text style={{ color: "#FFFFFF", fontSize: 40, fontWeight: "900" }}>🔥🔥 {progress.streakCount} Day Streak</Text>
           <Text style={{ color: "#E7C98A", marginTop: 5, fontSize: 15, fontWeight: "700" }}>{streakMotivation(progress.streakCount)}</Text>
           <Text style={{ color: "#AAB2C2", marginTop: 6 }}>
             Longest streak: {progress.longestStreak} days • Sessions logged: {progress.totalSessionsLogged}
@@ -286,7 +322,8 @@ export default function ProfileScreen() {
 
         <View style={glassCard}>
           <Text style={sectionTitle}>Today&apos;s Mission</Text>
-          <Text style={sectionSubtle}>Finish your daily reps and keep your progression curve moving up.</Text>
+          <Text style={sectionSubtle}>AI picks from your library + pending assignments. Finish strong and protect your streak.</Text>
+          <MissionProgressBar completed={todayMissionTasks.filter((task) => completedToday.includes(task.id)).length} total={todayMissionTasks.length} accentColor={accentColor} />
           <View style={{ gap: 10, marginTop: 10 }}>
             {todayMissionTasks.map((task) => {
               const done = completedToday.includes(task.id);
@@ -324,13 +361,33 @@ export default function ProfileScreen() {
 
         <View style={glassCard}>
           <Text style={sectionTitle}>Ready for Review</Text>
-          <Text style={sectionSubtle}>These techniques are due now based on your review history.</Text>
+          <Text style={sectionSubtle}>Ordered by likely forgetting risk: days since review + recall strength.</Text>
+          {reviewQueue.length > 0 ? (
+            <Pressable
+              onPress={() => {
+                setReviewIndex(0);
+                setReviewSessionOpen(true);
+              }}
+              style={{
+                marginTop: 10,
+                borderWidth: 1,
+                borderColor: withAlpha("#D4B06A", 0.8),
+                backgroundColor: "rgba(212,176,106,0.14)",
+                borderRadius: 10,
+                paddingVertical: 10,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#F4E6C4", fontWeight: "900" }}>Start Review Session</Text>
+            </Pressable>
+          ) : null}
           <View style={{ gap: 10, marginTop: 10 }}>
             {readyForReview.length === 0 ? (
               <Text style={{ color: "#AAB2C2" }}>Add techniques to My Library to unlock spaced repetition reviews.</Text>
             ) : (
               readyForReview.map((technique) => {
                 const days = daysSince(progress.lastReviewedByTechniqueId[technique.id]);
+                const strength = progress.reviewStrengthByTechniqueId[technique.id] ?? 2;
                 return (
                   <View
                     key={`review-${technique.id}`}
@@ -347,6 +404,7 @@ export default function ProfileScreen() {
                     <Text style={{ color: "#7F8795", marginTop: 4 }}>
                       {days >= 9999 ? "Never reviewed" : `${days} day${days === 1 ? "" : "s"} since review`}
                     </Text>
+                    <Text style={{ color: "#8E96A5", marginTop: 2 }}>Recall strength: {strength}/5</Text>
                     <Pressable
                       onPress={() => void onReviewNow(technique.id)}
                       style={{
@@ -448,6 +506,19 @@ export default function ProfileScreen() {
         </View>
       </Animated.View>
       <StreakConfetti progress={streakPulseAnim} />
+      <ReviewSessionModal
+        open={reviewSessionOpen}
+        onClose={() => setReviewSessionOpen(false)}
+        queue={reviewQueue}
+        index={reviewIndex}
+        onRemembered={(id) => void onRateRecall(id, true)}
+        onNeedPractice={(id) => void onRateRecall(id, false)}
+        onOpenTechnique={(id) => {
+          setReviewSessionOpen(false);
+          router.push(`/technique/${id}` as Href);
+        }}
+        accentColor={accentColor}
+      />
     </SafeAreaView>
   );
 }
@@ -517,6 +588,87 @@ function ShortcutButton({ label, onPress, accentColor }: { label: string; onPres
     >
       <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 12 }}>{label}</Text>
     </Pressable>
+  );
+}
+
+function MissionProgressBar({ completed, total, accentColor }: { completed: number; total: number; accentColor: string }) {
+  const ratio = total > 0 ? completed / total : 0;
+  return (
+    <View style={{ marginTop: 10 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+        <Text style={{ color: "#BFC8D8", fontWeight: "700" }}>
+          {completed}/{total} missions complete
+        </Text>
+        <Text style={{ color: "#D4B06A", fontWeight: "800" }}>{Math.round(ratio * 100)}%</Text>
+      </View>
+      <View style={{ height: 9, borderRadius: 999, backgroundColor: "#1A1A1A", overflow: "hidden" }}>
+        <View style={{ width: `${Math.max(4, ratio * 100)}%`, height: "100%", backgroundColor: withAlpha(accentColor, 0.95) }} />
+      </View>
+    </View>
+  );
+}
+
+function ReviewSessionModal({
+  open,
+  onClose,
+  queue,
+  index,
+  onRemembered,
+  onNeedPractice,
+  onOpenTechnique,
+  accentColor,
+}: {
+  open: boolean;
+  onClose: () => void;
+  queue: { technique: { id: string; name: string; position: string }; days: number; strength: number; score: number }[];
+  index: number;
+  onRemembered: (id: string) => void;
+  onNeedPractice: (id: string) => void;
+  onOpenTechnique: (id: string) => void;
+  accentColor: string;
+}) {
+  const current = queue[index];
+  return (
+    <Modal visible={open} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.82)", justifyContent: "flex-end" }}>
+        <View style={{ backgroundColor: "#0A0A0A", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, gap: 10 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900" }}>Review Session</Text>
+            <Pressable onPress={onClose}>
+              <Text style={{ color: "#AAB2C2", fontWeight: "800" }}>Close</Text>
+            </Pressable>
+          </View>
+          {current ? (
+            <View style={{ borderWidth: 1, borderColor: "#232323", borderRadius: 14, padding: 14, backgroundColor: "#0F0F0F", gap: 8 }}>
+              <Text style={{ color: "#8E96A5", fontWeight: "700" }}>
+                Technique {index + 1} of {queue.length}
+              </Text>
+              <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "900" }}>{current.technique.name}</Text>
+              <Text style={{ color: "#B6C0D0" }}>{current.technique.position}</Text>
+              <Text style={{ color: "#8E96A5" }}>
+                {current.days >= 9999 ? "Never reviewed" : `${current.days} day${current.days === 1 ? "" : "s"} since review`} • Strength {current.strength}/5
+              </Text>
+              <Pressable onPress={() => onOpenTechnique(current.technique.id)} style={{ borderWidth: 1, borderColor: withAlpha(accentColor, 0.8), borderRadius: 10, paddingVertical: 8, alignItems: "center", backgroundColor: withAlpha(accentColor, 0.16) }}>
+                <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>Open Technique Detail</Text>
+              </Pressable>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Pressable onPress={() => onRemembered(current.technique.id)} style={{ flex: 1, borderWidth: 1, borderColor: "#2A7F48", borderRadius: 10, paddingVertical: 10, alignItems: "center", backgroundColor: "rgba(58,134,89,0.22)" }}>
+                  <Text style={{ color: "#E9FFF1", fontWeight: "900" }}>I Remembered It</Text>
+                </Pressable>
+                <Pressable onPress={() => onNeedPractice(current.technique.id)} style={{ flex: 1, borderWidth: 1, borderColor: "#A8732E", borderRadius: 10, paddingVertical: 10, alignItems: "center", backgroundColor: "rgba(168,115,46,0.2)" }}>
+                  <Text style={{ color: "#FFEFD9", fontWeight: "900" }}>Need More Practice</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <View style={{ borderWidth: 1, borderColor: "#232323", borderRadius: 14, padding: 16, backgroundColor: "#0F0F0F" }}>
+              <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 18 }}>Session complete ✅</Text>
+              <Text style={{ color: "#AAB2C2", marginTop: 6 }}>Great work. You just reinforced your recall map for the week.</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -591,16 +743,23 @@ function selectDailyWarmups(dateKey: string): string[] {
 }
 
 function selectDailyTechniqueDrills(
+  assignmentRecommended: { id: string; name: string }[],
   reviewPriority: { id: string; name: string }[],
   currentBeltUnmastered: { id: string; name: string }[]
 ): { id: string; name: string }[] {
   const picks: { id: string; name: string }[] = [];
   const seen = new Set<string>();
-  for (const candidate of reviewPriority) {
+  for (const candidate of assignmentRecommended) {
     if (seen.has(candidate.id)) continue;
     picks.push(candidate);
     seen.add(candidate.id);
     if (picks.length >= 2) break;
+  }
+  for (const candidate of reviewPriority) {
+    if (seen.has(candidate.id)) continue;
+    picks.push(candidate);
+    seen.add(candidate.id);
+    if (picks.length >= 3) break;
   }
   for (const candidate of currentBeltUnmastered) {
     if (seen.has(candidate.id)) continue;

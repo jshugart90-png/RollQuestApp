@@ -45,7 +45,7 @@ function formatNoteDate(iso: string) {
 
 export default function NotesScreen() {
   const router = useRouter();
-  const { techniqueId } = useLocalSearchParams<{ techniqueId?: string }>();
+  const { techniqueId, compose } = useLocalSearchParams<{ techniqueId?: string; compose?: string }>();
   const accentColor = useGymStore((state) => state.accentColor);
   const [notes, setNotes] = useState<SessionNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +78,12 @@ export default function NotesScreen() {
       void reload();
     }, [reload])
   );
+
+  React.useEffect(() => {
+    if (compose === "1") {
+      openNew();
+    }
+  }, [compose]);
 
   const techniques = useResolvedTechniques();
   const searchResults = useMemo(() => {

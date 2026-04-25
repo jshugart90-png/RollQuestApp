@@ -19,6 +19,8 @@ export type UserProgress = {
   myTechniques: string[];
   /** ISO date (YYYY-MM-DD) by technique id for spaced review. */
   lastReviewedByTechniqueId: Record<string, string>;
+  /** Spaced repetition memory strength by technique id (0-5). */
+  reviewStrengthByTechniqueId: Record<string, number>;
   /** Completed daily task ids bucketed by YYYY-MM-DD. */
   completedDailyTaskIdsByDate: Record<string, string[]>;
 };
@@ -35,6 +37,7 @@ export const defaultProgress: UserProgress = {
   learnedTechniqueIds: [],
   myTechniques: [],
   lastReviewedByTechniqueId: {},
+  reviewStrengthByTechniqueId: {},
   completedDailyTaskIdsByDate: {},
 };
 
@@ -109,6 +112,15 @@ export async function loadProgress(): Promise<UserProgress> {
               Object.entries(parsed.lastReviewedByTechniqueId).filter(
                 (entry): entry is [string, string] => typeof entry[0] === "string" && typeof entry[1] === "string"
               )
+            )
+          : {},
+      reviewStrengthByTechniqueId:
+        parsed.reviewStrengthByTechniqueId && typeof parsed.reviewStrengthByTechniqueId === "object"
+          ? Object.fromEntries(
+              Object.entries(parsed.reviewStrengthByTechniqueId).map(([id, value]) => [
+                id,
+                Number.isFinite(value) ? Math.max(0, Math.min(5, Math.floor(value as number))) : 2,
+              ])
             )
           : {},
       completedDailyTaskIdsByDate:
@@ -212,6 +224,10 @@ export async function addToMyLibrary(id: string): Promise<UserProgress> {
       ...progress.lastReviewedByTechniqueId,
       [id]: progress.lastReviewedByTechniqueId[id] ?? today,
     },
+    reviewStrengthByTechniqueId: {
+      ...progress.reviewStrengthByTechniqueId,
+      [id]: progress.reviewStrengthByTechniqueId[id] ?? 2,
+    },
   };
   await saveProgress(updated);
   return registerActivity(today);
@@ -224,10 +240,12 @@ export async function addMultipleToMyLibrary(ids: string[]): Promise<UserProgres
   const merged = [...new Set([...progress.myTechniques, ...incoming])];
   const today = startOfTodayDateString();
   const nextReviewed = { ...progress.lastReviewedByTechniqueId };
+  const nextStrength = { ...progress.reviewStrengthByTechniqueId };
   for (const id of incoming) {
     if (!nextReviewed[id]) nextReviewed[id] = today;
+    if (nextStrength[id] === undefined) nextStrength[id] = 2;
   }
-  const updated = { ...progress, myTechniques: merged, lastReviewedByTechniqueId: nextReviewed };
+  const updated = { ...progress, myTechniques: merged, lastReviewedByTechniqueId: nextReviewed, reviewStrengthByTechniqueId: nextStrength };
   await saveProgress(updated);
   return registerActivity(today);
 }
@@ -248,9 +266,33 @@ export async function markTechniqueReviewed(techniqueId: string, reviewedDate = 
       ...progress.lastReviewedByTechniqueId,
       [techniqueId]: reviewedDate,
     },
+    reviewStrengthByTechniqueId: {
+      ...progress.reviewStrengthByTechniqueId,
+      [techniqueId]: progress.reviewStrengthByTechniqueId[techniqueId] ?? 2,
+    },
   };
   await saveProgress(updated);
   return registerActivity(reviewedDate);
+}
+
+export async function rateTechniqueRecall(techniqueId: string, remembered: boolean): Promise<UserProgress> {
+  const progress = await loadProgress();
+  const today = startOfTodayDateString();
+  const currentStrength = progress.reviewStrengthByTechniqueId[techniqueId] ?? 2;
+  const nextStrength = remembered ? Math.min(5, currentStrength + 1) : Math.max(0, currentStrength - 1);
+  const updated = {
+    ...progress,
+    lastReviewedByTechniqueId: {
+      ...progress.lastReviewedByTechniqueId,
+      [techniqueId]: today,
+    },
+    reviewStrengthByTechniqueId: {
+      ...progress.reviewStrengthByTechniqueId,
+      [techniqueId]: nextStrength,
+    },
+  };
+  await saveProgress(updated);
+  return registerActivity(today);
 }
 
 export async function markDailyTaskCompleted(taskId: string, date = startOfTodayDateString()): Promise<UserProgress> {
