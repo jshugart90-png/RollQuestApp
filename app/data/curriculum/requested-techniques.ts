@@ -5,6 +5,8 @@ type RequestedItem = {
   position: Technique["position"];
   category: string;
   difficulty?: Technique["difficulty"];
+  /** When set, links to that exact public YouTube video. */
+  youtubeId?: string;
 };
 
 function slug(input: string): string {
@@ -132,7 +134,9 @@ function createRequestedTechnique(item: RequestedItem): Technique {
     fullStepByStep: buildDetailedSteps(item),
     tips: buildTips(item),
     commonMistakes: buildMistakes(item),
-    youtubeUrl: "https://www.youtube.com/",
+    youtubeUrl: item.youtubeId
+      ? `https://www.youtube.com/watch?v=${item.youtubeId}`
+      : "",
     difficulty: item.difficulty ?? "beginner",
     curriculum: {
       sourceGym: "RollQuest Requested Set",

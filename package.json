@@ -9,6 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "verify:videos": "npx tsx scripts/verify-youtube-links.ts",
     "save:github": "node ./scripts/save-to-github.mjs",
     "sync:github": "node ./scripts/sync-github.mjs"
   },

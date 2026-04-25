@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { Technique } from "../../data/techniques";
+import { hasValidYoutubeWatchUrl } from "../../utils/youtubeVideoUrl";
 import { useResolvedTechniqueById } from "../../hooks/useResolvedTechniques";
 import { useGymStore, withAlpha } from "../../store/gym";
 import { loadNotes, type SessionNote } from "../../store/notes";
@@ -181,21 +182,39 @@ function TechniqueBody({
             ))}
           </View>
 
-          <Pressable
-            onPress={() => Linking.openURL(technique.youtubeUrl)}
-            style={{
-              borderWidth: 1,
-              borderColor: "#D4B06A",
-              backgroundColor: "rgba(212,176,106,0.12)",
-              borderRadius: 14,
-              padding: 14,
-            }}
-          >
-            <Text style={{ color: "#D4B06A", fontWeight: "900", fontSize: 16 }}>Watch Exact YouTube Breakdown</Text>
-            <Text style={{ color: "#B7BECC", marginTop: 4 }}>
-              Open the full video, study details, then drill with control and intention.
-            </Text>
-          </Pressable>
+          {hasValidYoutubeWatchUrl(technique.youtubeUrl) ? (
+            <Pressable
+              onPress={() => Linking.openURL(technique.youtubeUrl)}
+              style={{
+                borderWidth: 1,
+                borderColor: "#D4B06A",
+                backgroundColor: "rgba(212,176,106,0.12)",
+                borderRadius: 14,
+                padding: 14,
+              }}
+            >
+              <Text style={{ color: "#D4B06A", fontWeight: "900", fontSize: 16 }}>Watch Exact YouTube Breakdown</Text>
+              <Text style={{ color: "#B7BECC", marginTop: 4 }}>
+                Open the full video, study details, then drill with control and intention.
+              </Text>
+            </Pressable>
+          ) : (
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "#333",
+                backgroundColor: "#121212",
+                borderRadius: 14,
+                padding: 14,
+              }}
+            >
+              <Text style={{ color: "#8E96A5", fontWeight: "800", fontSize: 16 }}>No linked breakdown video</Text>
+              <Text style={{ color: "#6B7280", marginTop: 4 }}>
+                This entry does not have a curated breakdown video yet. Ask your coach for a reference or search
+                trusted instructionals for this movement by name.
+              </Text>
+            </View>
+          )}
 
           <Pressable
             onPress={() => void onToggleMastered()}

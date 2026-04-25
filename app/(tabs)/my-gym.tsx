@@ -142,7 +142,7 @@ export default function MyGymScreen() {
       fullStepByStep: [customMoveDescription.trim() || "Coach-defined sequence."],
       tips: ["Customize this movement from Curriculum if needed."],
       commonMistakes: ["Not yet defined."],
-      youtubeUrl: "https://www.youtube.com/",
+      youtubeUrl: "",
       difficulty: "beginner",
       curriculum: {
         sourceGym: gymName,
