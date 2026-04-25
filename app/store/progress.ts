@@ -12,6 +12,8 @@ export type UserProgress = {
   streakDays: number;
   streakCount: number;
   lastActivityDate: string | null;
+  longestStreak: number;
+  totalSessionsLogged: number;
   dailyGoal: number;
   learnedTechniqueIds: string[];
   myTechniques: string[];
@@ -27,6 +29,8 @@ export const defaultProgress: UserProgress = {
   streakDays: 3,
   streakCount: 3,
   lastActivityDate: null,
+  longestStreak: 3,
+  totalSessionsLogged: 0,
   dailyGoal: 3,
   learnedTechniqueIds: [],
   myTechniques: [],
@@ -70,6 +74,12 @@ export async function loadProgress(): Promise<UserProgress> {
       : defaultProgress.currentBelt;
     const parsedStreak = typeof parsed.streakCount === "number" ? parsed.streakCount : parsed.streakDays;
     const normalizedStreak = Number.isFinite(parsedStreak) ? Math.max(0, Math.floor(parsedStreak ?? 0)) : 0;
+    const parsedLongestStreak = typeof parsed.longestStreak === "number" ? parsed.longestStreak : normalizedStreak;
+    const normalizedLongestStreak = Number.isFinite(parsedLongestStreak)
+      ? Math.max(normalizedStreak, Math.floor(parsedLongestStreak ?? 0))
+      : normalizedStreak;
+    const parsedTotalSessions = typeof parsed.totalSessionsLogged === "number" ? parsed.totalSessionsLogged : 0;
+    const normalizedTotalSessions = Number.isFinite(parsedTotalSessions) ? Math.max(0, Math.floor(parsedTotalSessions)) : 0;
     const normalizedLastActivityDate =
       typeof parsed.lastActivityDate === "string" && parsed.lastActivityDate.trim().length > 0
         ? parsed.lastActivityDate
@@ -82,6 +92,8 @@ export async function loadProgress(): Promise<UserProgress> {
       streakCount: normalizedStreak,
       streakDays: normalizedStreak,
       lastActivityDate: normalizedLastActivityDate,
+      longestStreak: normalizedLongestStreak,
+      totalSessionsLogged: normalizedTotalSessions,
       learnedTechniqueIds: Array.isArray(parsed.learnedTechniqueIds) ? parsed.learnedTechniqueIds : [],
       myTechniques: [
         ...new Set([
@@ -158,11 +170,14 @@ export async function registerActivity(activityDate = startOfTodayDateString()):
     return progress;
   }
   const nextStreak = progress.lastActivityDate === previousDateString(activityDate) ? progress.streakCount + 1 : 1;
+  const nextLongestStreak = Math.max(progress.longestStreak, nextStreak);
   const updated: UserProgress = {
     ...progress,
     streakCount: nextStreak,
     streakDays: nextStreak,
     lastActivityDate: activityDate,
+    longestStreak: nextLongestStreak,
+    totalSessionsLogged: progress.totalSessionsLogged + 1,
   };
   await saveProgress(updated);
   return updated;
