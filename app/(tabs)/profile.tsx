@@ -33,6 +33,8 @@ export default function ProfileScreen() {
   const [draftProfileName, setDraftProfileName] = useState("Student");
   const [celebrationText, setCelebrationText] = useState("");
   const celebrationAnim = useRef(new Animated.Value(0)).current;
+  const streakPulseAnim = useRef(new Animated.Value(0)).current;
+  const previousStreakRef = useRef(defaultProgress.streakCount);
 
   const router = useRouter();
   const accentColor = useGymStore((state) => state.accentColor);
@@ -44,10 +46,29 @@ export default function ProfileScreen() {
   useFocusEffect(
     React.useCallback(() => {
       void loadProgress().then((loaded) => {
+        if (loaded.streakCount > previousStreakRef.current) {
+          setCelebrationText(`Streak up! You are now at ${loaded.streakCount} days.`);
+          streakPulseAnim.setValue(0);
+          Animated.sequence([
+            Animated.timing(streakPulseAnim, {
+              toValue: 1,
+              duration: 320,
+              easing: Easing.out(Easing.back(1.8)),
+              useNativeDriver: true,
+            }),
+            Animated.timing(streakPulseAnim, {
+              toValue: 0,
+              duration: 240,
+              easing: Easing.inOut(Easing.quad),
+              useNativeDriver: true,
+            }),
+          ]).start();
+        }
+        previousStreakRef.current = loaded.streakCount;
         setProgress(loaded);
         setDraftProfileName(loaded.profileName);
       });
-    }, [])
+    }, [streakPulseAnim])
   );
 
   async function onSelectBelt(belt: BeltLevel) {
@@ -129,6 +150,10 @@ export default function ProfileScreen() {
     if (task.techniqueId && !wasDone) {
       updated = await markTechniqueReviewed(task.techniqueId);
     }
+    if (updated.streakCount > progress.streakCount) {
+      triggerStreakCelebration(updated.streakCount);
+    }
+    previousStreakRef.current = updated.streakCount;
     setProgress(updated);
     if (!wasDone) {
       triggerCelebration(task.type === "technique" ? "Technique banked. Keep stacking wins." : "Mission complete. Momentum locked in.");
@@ -137,6 +162,10 @@ export default function ProfileScreen() {
 
   async function onReviewNow(techniqueId: string) {
     const updated = await markTechniqueReviewed(techniqueId);
+    if (updated.streakCount > progress.streakCount) {
+      triggerStreakCelebration(updated.streakCount);
+    }
+    previousStreakRef.current = updated.streakCount;
     setProgress(updated);
     router.push(`/technique/${techniqueId}` as Href);
   }
@@ -159,6 +188,26 @@ export default function ProfileScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+  }
+
+  function triggerStreakCelebration(nextStreak: number) {
+    setCelebrationText(`Streak up! You are now at ${nextStreak} days.`);
+    streakPulseAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(streakPulseAnim, {
+        toValue: 1,
+        duration: 320,
+        easing: Easing.out(Easing.back(1.8)),
+        useNativeDriver: true,
+      }),
+      Animated.timing(streakPulseAnim, {
+        toValue: 0,
+        duration: 240,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+    triggerCelebration("🔥 Streak extended. Keep your championship pace.");
   }
 
   return (
@@ -210,13 +259,30 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        <View style={[glassCard, { borderColor: withAlpha("#D4B06A", 0.55), backgroundColor: "rgba(212,176,106,0.08)" }]}>
-          <Text style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "900" }}>🔥 {progress.streakCount} Day Streak</Text>
+        <Animated.View
+          style={[
+            glassCard,
+            {
+              borderColor: withAlpha("#D4B06A", 0.55),
+              backgroundColor: "rgba(212,176,106,0.08)",
+              transform: [
+                {
+                  scale: streakPulseAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 1.03],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={{ color: "#FFFFFF", fontSize: 36, fontWeight: "900" }}>🔥🔥 {progress.streakCount} Day Streak</Text>
           <Text style={{ color: "#E7C98A", marginTop: 5, fontSize: 15, fontWeight: "700" }}>{streakMotivation(progress.streakCount)}</Text>
           <Text style={{ color: "#AAB2C2", marginTop: 6 }}>
             Longest streak: {progress.longestStreak} days • Sessions logged: {progress.totalSessionsLogged}
           </Text>
-        </View>
+          <Text style={{ color: "#F8DDA8", marginTop: 4, fontWeight: "800" }}>Show up today, protect the fire.</Text>
+        </Animated.View>
 
         <View style={glassCard}>
           <Text style={sectionTitle}>Today&apos;s Mission</Text>
@@ -316,6 +382,16 @@ export default function ProfileScreen() {
         </View>
 
         <View style={glassCard}>
+          <Text style={sectionTitle}>Daily Flow Shortcuts</Text>
+          <Text style={sectionSubtle}>Move from planning to drilling to notes in seconds.</Text>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+            <ShortcutButton label="Open Notes" onPress={() => router.push("/notes" as Href)} accentColor={accentColor} />
+            <ShortcutButton label="My Library" onPress={() => router.push("/library" as Href)} accentColor={accentColor} />
+            <ShortcutButton label="My Gym" onPress={() => router.push("/my-gym" as Href)} accentColor={accentColor} />
+          </View>
+        </View>
+
+        <View style={glassCard}>
           <Text style={sectionTitle}>Set Current Belt</Text>
           <View style={{ gap: 8, marginTop: 8 }}>
             {BELTS.map((belt) => {
@@ -371,6 +447,7 @@ export default function ProfileScreen() {
           <Text style={{ color: "#EAFBEF", fontWeight: "900", textAlign: "center" }}>✅ {celebrationText}</Text>
         </View>
       </Animated.View>
+      <StreakConfetti progress={streakPulseAnim} />
     </SafeAreaView>
   );
 }
@@ -420,6 +497,63 @@ function StatsGridTile({ label, value }: { label: string; value: string }) {
     >
       <Text style={{ color: "#8E96A5", fontWeight: "700" }}>{label}</Text>
       <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "900", marginTop: 3 }}>{value}</Text>
+    </View>
+  );
+}
+
+function ShortcutButton({ label, onPress, accentColor }: { label: string; onPress: () => void; accentColor: string }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flex: 1,
+        borderWidth: 1,
+        borderColor: withAlpha(accentColor, 0.7),
+        backgroundColor: withAlpha(accentColor, 0.14),
+        borderRadius: 10,
+        paddingVertical: 10,
+        alignItems: "center",
+      }}
+    >
+      <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 12 }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function StreakConfetti({ progress }: { progress: Animated.Value }) {
+  const pieces = [-110, -55, 0, 55, 110];
+  return (
+    <View pointerEvents="none" style={{ position: "absolute", top: 78, left: 0, right: 0, alignItems: "center" }}>
+      {pieces.map((x, idx) => (
+        <Animated.Text
+          key={`confetti-${x}`}
+          style={{
+            position: "absolute",
+            fontSize: 18 + (idx % 2) * 4,
+            opacity: progress.interpolate({
+              inputRange: [0, 0.2, 1],
+              outputRange: [0, 1, 0],
+            }),
+            transform: [
+              { translateX: x },
+              {
+                translateY: progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -38 - idx * 6],
+                }),
+              },
+              {
+                rotate: progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["0deg", `${idx % 2 === 0 ? "-" : ""}24deg`],
+                }),
+              },
+            ],
+          }}
+        >
+          {idx % 2 === 0 ? "🔥" : "✨"}
+        </Animated.Text>
+      ))}
     </View>
   );
 }

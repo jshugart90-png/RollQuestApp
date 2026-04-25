@@ -11,17 +11,26 @@ export type Assignment = {
   completedBy?: string[];
 };
 
+export type GymAnnouncement = {
+  id: string;
+  message: string;
+  createdAt: string;
+};
+
 const DEFAULT_ROSTER = ["Student", "Alex", "Jordan", "Sam", "Casey"];
 
 type AssignmentsState = {
   roster: string[];
   assignments: Assignment[];
+  announcements: GymAnnouncement[];
   setRoster: (roster: string[]) => void;
   createAssignment: (payload: Omit<Assignment, "id" | "completedBy">) => Assignment;
   updateAssignment: (id: string, patch: Omit<Assignment, "id" | "completedBy">) => void;
   reorderAssignments: (orderedIds: string[]) => void;
   removeAssignment: (id: string) => void;
   toggleAssignmentCompletion: (assignmentId: string, profileName: string) => void;
+  addAnnouncement: (message: string) => GymAnnouncement | null;
+  removeAnnouncement: (id: string) => void;
   resetAssignments: () => void;
 };
 
@@ -34,6 +43,7 @@ export const useAssignmentsStore = create<AssignmentsState>()(
     (set) => ({
       roster: DEFAULT_ROSTER,
       assignments: [],
+      announcements: [],
       setRoster: (roster) =>
         set({
           roster: roster.map((name) => name.trim()).filter((name) => name.length > 0),
@@ -87,7 +97,22 @@ export const useAssignmentsStore = create<AssignmentsState>()(
             return { ...assignment, completedBy };
           }),
         })),
-      resetAssignments: () => set({ roster: DEFAULT_ROSTER, assignments: [] }),
+      addAnnouncement: (message) => {
+        const trimmed = message.trim();
+        if (!trimmed) return null;
+        const item: GymAnnouncement = {
+          id: `ann-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          message: trimmed,
+          createdAt: new Date().toISOString(),
+        };
+        set((state) => ({ announcements: [item, ...state.announcements] }));
+        return item;
+      },
+      removeAnnouncement: (id) =>
+        set((state) => ({
+          announcements: state.announcements.filter((item) => item.id !== id),
+        })),
+      resetAssignments: () => set({ roster: DEFAULT_ROSTER, assignments: [], announcements: [] }),
     }),
     {
       name: "rollquest.assignments.v1",
@@ -95,6 +120,7 @@ export const useAssignmentsStore = create<AssignmentsState>()(
       partialize: (state) => ({
         roster: state.roster,
         assignments: state.assignments,
+        announcements: state.announcements,
       }),
       merge: (persisted, current) => {
         if (!persisted || typeof persisted !== "object") return current;
@@ -113,6 +139,23 @@ export const useAssignmentsStore = create<AssignmentsState>()(
                   linkedTechniqueIds: Array.isArray(item.linkedTechniqueIds)
                     ? item.linkedTechniqueIds.filter((id): id is string => typeof id === "string")
                     : [],
+                }))
+            : [],
+          announcements: Array.isArray(p.announcements)
+            ? p.announcements
+                .filter(
+                  (item): item is GymAnnouncement =>
+                    Boolean(
+                      item &&
+                        typeof item.id === "string" &&
+                        typeof item.message === "string" &&
+                        typeof item.createdAt === "string"
+                    )
+                )
+                .map((item) => ({
+                  id: item.id,
+                  message: item.message.trim(),
+                  createdAt: item.createdAt,
                 }))
             : [],
         };
