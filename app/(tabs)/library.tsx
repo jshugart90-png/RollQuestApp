@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -346,14 +347,17 @@ export default function LibraryScreen() {
           style={{
             borderWidth: 1,
             borderColor: "#232323",
-            borderRadius: 14,
-            backgroundColor: "#0D0D0D",
-            padding: 14,
+            borderRadius: 16,
+            backgroundColor: "#0A0A0A",
+            padding: 22,
+            alignItems: "center",
+            gap: 10,
           }}
         >
-          <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>No techniques in this tab yet.</Text>
-          <Text style={{ color: "#8E96A5", marginTop: 4 }}>
-            Try adjusting your search, filters, or belt selection to find the technique.
+          <Ionicons name="search-outline" size={40} color="#4A5568" />
+          <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 17 }}>No matches</Text>
+          <Text style={{ color: "#8E96A5", textAlign: "center", lineHeight: 22 }}>
+            Loosen search, switch belt chip, or try another position filter.
           </Text>
         </View>
       ) : null}

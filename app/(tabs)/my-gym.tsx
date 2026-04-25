@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import type { Href } from "expo-router";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
@@ -111,6 +112,8 @@ export default function MyGymScreen() {
   const [videoSearch, setVideoSearch] = useState("");
   const [videoDrafts, setVideoDrafts] = useState<Record<string, string>>({});
   const [isReorderingTiles, setIsReorderingTiles] = useState(false);
+  /** Extra lock: nested drag autoscroll can still nudge the parent; keep outer scroll off during assignment reorder. */
+  const [isDraggingAssignmentBoard, setIsDraggingAssignmentBoard] = useState(false);
 
   React.useEffect(() => {
     setLogoInput(logoUrl ?? "");
@@ -352,9 +355,7 @@ export default function MyGymScreen() {
       return (
         <View style={[card, { borderColor: withAlpha(accentColor, 0.55), backgroundColor: withAlpha(accentColor, 0.1) }]}>
           <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "900" }}>{gymName} Admin HQ</Text>
-          <Text style={{ color: "#C6D0E0" }}>
-            Publish announcements, assign focused drills, and monitor student completion in one premium dashboard.
-          </Text>
+          <Text style={{ color: "#C6D0E0", lineHeight: 22 }}>Announcements, homework, roster pulse, and requests—one place.</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <MiniStat label="Assignments" value={String(boardAssignments.length)} />
             <MiniStat label="Roster" value={String(roster.length)} />
@@ -362,9 +363,7 @@ export default function MyGymScreen() {
             <MiniStat label="Tech requests" value={String(pendingTechniqueRequests.length)} />
           </View>
           <Text style={{ color: "#8E96A5" }}>
-            {progress
-              ? `Student mastery map: ${Object.keys(progress.masteryByTechniqueId).length} tracked techniques.`
-              : "Loading student mastery map..."}
+            {progress ? `${Object.keys(progress.masteryByTechniqueId).length} techniques on your mastery map.` : "Loading…"}
           </Text>
         </View>
       );
@@ -372,8 +371,8 @@ export default function MyGymScreen() {
     if (id === "announcements") {
       return (
         <View style={card}>
-          <Text style={title}>Quick announcements</Text>
-          <Text style={{ color: "#8E96A5" }}>Broadcast class updates, focus themes, and reminders instantly.</Text>
+          <Text style={title}>Announcements</Text>
+          <Text style={{ color: "#8E96A5", fontSize: 13 }}>Short posts for your team—class theme, schedule tweak, hype.</Text>
           <TextInput
             value={announcementTitle}
             onChangeText={setAnnouncementTitle}
@@ -400,21 +399,36 @@ export default function MyGymScreen() {
             <Text style={buttonText}>Post announcement</Text>
           </Pressable>
           {announcements.length === 0 ? (
-            <EmptyCard text="No announcements yet. Post your first update to keep students aligned." />
+            <EmptyCard icon="megaphone-outline" text="Nothing posted yet. Drop one line—your crew will see it in Notifications." />
           ) : (
             announcements.slice(0, 4).map((item) => (
-              <View key={item.id} style={chipCard}>
-                <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{item.title}</Text>
-                <Text style={{ color: "#E9EDF7", lineHeight: 20 }}>{item.message}</Text>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
-                  <Text style={{ color: "#7B8392", fontSize: 12 }}>
-                    {new Date(item.createdAt).toLocaleDateString()}
-                    {item.expiresOn ? ` • expires ${item.expiresOn}` : ""}
-                  </Text>
-                  <Pressable onPress={() => removeAnnouncement(item.id)}>
-                    <Text style={{ color: "#F29A9A", fontWeight: "800" }}>Delete</Text>
+              <View key={item.id} style={announcementCard}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>{item.title}</Text>
+                    <Text style={{ color: "#C8D0E0", lineHeight: 21, fontSize: 14 }} numberOfLines={4}>
+                      {item.message}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => removeAnnouncement(item.id)}
+                    hitSlop={8}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: "#3A2222",
+                      backgroundColor: pressed ? "rgba(90,31,31,0.5)" : "#221010",
+                    })}
+                  >
+                    <Text style={{ color: "#F29A9A", fontWeight: "800", fontSize: 12 }}>Delete</Text>
                   </Pressable>
                 </View>
+                <Text style={{ color: "#6F7785", fontSize: 12, marginTop: 8 }}>
+                  {new Date(item.createdAt).toLocaleDateString()}
+                  {item.expiresOn ? ` · Exp ${item.expiresOn}` : ""}
+                </Text>
               </View>
             ))
           )}
@@ -428,9 +442,7 @@ export default function MyGymScreen() {
           <TextInput value={assignmentTitle} onChangeText={setAssignmentTitle} placeholder="Title (e.g. Week 3 Guard Retention)" placeholderTextColor="#5D6574" style={inputStyle} />
           <TextInput value={assignmentDescription} onChangeText={setAssignmentDescription} placeholder="Description / coaching objective" placeholderTextColor="#5D6574" multiline style={[inputStyle, { minHeight: 84, textAlignVertical: "top" }]} />
           <TextInput value={assignmentDueDate} onChangeText={setAssignmentDueDate} placeholder="Due date (YYYY-MM-DD)" placeholderTextColor="#5D6574" style={inputStyle} />
-          <Text style={{ color: "#8E96A5", fontWeight: "700", fontSize: 12 }}>
-            Assign to roster (leave all unselected for entire team)
-          </Text>
+          <Text style={{ color: "#8E96A5", fontWeight: "700", fontSize: 12 }}>Roster chips optional—empty means whole team.</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {roster.map((student) => {
               const on = assignmentTargetStudents.includes(student.name);
@@ -483,40 +495,70 @@ export default function MyGymScreen() {
         <View style={card}>
           <Text style={title}>Assignment board</Text>
           {assignments.length === 0 ? (
-            <EmptyCard text="No assignments yet. Create your first mission above." />
+            <EmptyCard icon="clipboard-outline" text="No homework yet. Build one above—then drag cards to set the order your team sees." />
           ) : (
-            <NestableDraggableFlatList
-              data={assignments}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              onDragEnd={({ data }) => reorderAssignments(data.map((a) => a.id))}
-              renderItem={({ item: assignment, drag, isActive }) => (
-                <ScaleDecorator>
-                  <Pressable onLongPress={drag} delayLongPress={160} style={{ borderWidth: 1, borderColor: isActive ? withAlpha(accentColor, 0.9) : "#252525", borderRadius: 12, backgroundColor: "#0D0D0D", padding: 12, gap: 6, marginBottom: 8 }}>
-                    <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{assignment.title}</Text>
-                    <Text style={{ color: "#AAB2C2" }}>{assignment.description}</Text>
-                    {assignment.dueDate ? <Text style={{ color: "#8E96A5" }}>Due: {assignment.dueDate}</Text> : null}
-                    {(assignment.linkedTechniqueIds ?? []).length > 0 ? <Text style={{ color: "#D4B06A", fontSize: 12 }}>Linked: {(assignment.linkedTechniqueIds ?? []).map((tid) => getTechniqueName(tid)).join(", ")}</Text> : null}
-                    {(assignment.targetStudents ?? []).length > 0 ? (
-                      <Text style={{ color: "#AAB2C2", fontSize: 12 }}>
-                        Assigned to: {(assignment.targetStudents ?? []).join(", ")}
+            <View style={{ gap: 4 }}>
+              <Text style={{ color: "#6F7785", fontSize: 11, fontWeight: "800", letterSpacing: 0.6 }}>HOLD CARD TO REORDER</Text>
+              <NestableDraggableFlatList
+                data={assignments}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                autoscrollSpeed={0}
+                autoscrollThreshold={0}
+                onDragBegin={() => setIsDraggingAssignmentBoard(true)}
+                onRelease={() => setIsDraggingAssignmentBoard(false)}
+                onDragEnd={({ data }) => {
+                  setIsDraggingAssignmentBoard(false);
+                  reorderAssignments(data.map((a) => a.id));
+                }}
+                renderItem={({ item: assignment, drag, isActive }) => (
+                  <ScaleDecorator>
+                    <Pressable
+                      onLongPress={drag}
+                      delayLongPress={280}
+                      style={({ pressed }) => ({
+                        borderWidth: 1,
+                        borderColor: isActive ? withAlpha(accentColor, 0.95) : pressed ? "#3A3A3A" : "#252525",
+                        borderRadius: 14,
+                        backgroundColor: isActive ? "#121820" : "#0D0D0D",
+                        padding: 14,
+                        gap: 6,
+                        marginBottom: 10,
+                        opacity: pressed && !isActive ? 0.92 : 1,
+                      })}
+                    >
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <Ionicons name="reorder-three" size={22} color="#6B7380" />
+                        <Text style={{ color: "#FFFFFF", fontWeight: "900", flex: 1, fontSize: 16 }}>{assignment.title}</Text>
+                      </View>
+                      <Text style={{ color: "#AAB2C2", fontSize: 14 }} numberOfLines={3}>
+                        {assignment.description}
                       </Text>
-                    ) : (
-                      <Text style={{ color: "#AAB2C2", fontSize: 12 }}>Assigned to: Entire roster</Text>
-                    )}
-                    <Text style={{ color: "#8E96A5", fontSize: 12 }}>Completed by: {(assignment.completedBy ?? []).length > 0 ? assignment.completedBy?.join(", ") : "No one yet"}</Text>
-                    <View style={{ flexDirection: "row", gap: 8 }}>
-                      <Pressable onPress={() => startEditAssignment(assignment.id)} style={tinyAction}>
-                        <Text style={{ color: "#DDE6FF", fontWeight: "700" }}>Edit</Text>
-                      </Pressable>
-                      <Pressable onPress={() => confirmDeleteAssignment(assignment.id)} style={[tinyAction, { borderColor: "#5A1F1F", backgroundColor: "#2A1111" }]}>
-                        <Text style={{ color: "#FFD6D6", fontWeight: "700" }}>Delete</Text>
-                      </Pressable>
-                    </View>
-                  </Pressable>
-                </ScaleDecorator>
-              )}
-            />
+                      {assignment.dueDate ? (
+                        <Text style={{ color: "#8E96A5", fontSize: 12 }}>Due {assignment.dueDate}</Text>
+                      ) : null}
+                      {(assignment.linkedTechniqueIds ?? []).length > 0 ? (
+                        <Text style={{ color: "#D4B06A", fontSize: 12 }} numberOfLines={2}>
+                          Linked: {(assignment.linkedTechniqueIds ?? []).map((tid) => getTechniqueName(tid)).join(", ")}
+                        </Text>
+                      ) : null}
+                      <Text style={{ color: "#8E96A5", fontSize: 12 }}>
+                        {(assignment.targetStudents ?? []).length > 0 ? assignment.targetStudents?.join(", ") : "Whole roster"} · Done:{" "}
+                        {(assignment.completedBy ?? []).length > 0 ? assignment.completedBy?.join(", ") : "—"}
+                      </Text>
+                      <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+                        <Pressable onPress={() => startEditAssignment(assignment.id)} style={tinyAction}>
+                          <Text style={{ color: "#DDE6FF", fontWeight: "700" }}>Edit</Text>
+                        </Pressable>
+                        <Pressable onPress={() => confirmDeleteAssignment(assignment.id)} style={[tinyAction, { borderColor: "#5A1F1F", backgroundColor: "#2A1111" }]}>
+                          <Text style={{ color: "#FFD6D6", fontWeight: "700" }}>Delete</Text>
+                        </Pressable>
+                      </View>
+                    </Pressable>
+                  </ScaleDecorator>
+                )}
+              />
+            </View>
           )}
         </View>
       );
@@ -524,13 +566,10 @@ export default function MyGymScreen() {
     if (id === "roster") {
       return (
         <View style={card}>
-          <Text style={title}>Student progress reports</Text>
-          <Text style={{ color: "#8E96A5" }}>
-            Simulated roster metrics for every student: belt track, assignments, recall streak, and estimated techniques
-            mastered (demo data until live sync ships).
-          </Text>
+          <Text style={title}>Roster & progress</Text>
+          <Text style={{ color: "#8E96A5", fontSize: 13, marginBottom: 4 }}>Demo metrics per student—belt pulse, homework, streak vibe.</Text>
           {rosterStats.map((item) => (
-            <View key={item.student.name} style={chipCard}>
+            <View key={item.student.name} style={rosterCard}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>
                   {item.student.name}{" "}
@@ -567,12 +606,9 @@ export default function MyGymScreen() {
       return (
         <View style={card}>
           <Text style={title}>Technique requests</Text>
-          <Text style={{ color: "#8E96A5" }}>
-            Students linked to your gym can request curriculum focus from Library or Profile. Clear items as you cover
-            them in class.
-          </Text>
+          <Text style={{ color: "#8E96A5", fontSize: 13 }}>Linked students tap Request in Library—clear when you teach it.</Text>
           {pendingTechniqueRequests.length === 0 ? (
-            <EmptyCard text="No open requests. Students will appear here after they submit from their app." />
+            <EmptyCard icon="hand-left-outline" text="All quiet. When students request moves, they land here." />
           ) : (
             pendingTechniqueRequests.map((req) => (
               <View key={req.id} style={chipCard}>
@@ -690,7 +726,7 @@ export default function MyGymScreen() {
             <Text style={buttonText}>Add custom move</Text>
           </Pressable>
           {customTechniques.length === 0 ? (
-            <EmptyCard text="No custom moves yet. Add gym-specific systems and local variants here." />
+            <EmptyCard icon="barbell-outline" text="No custom moves yet—stamp your gym’s systems here." />
           ) : (
             customTechniques.map((move) => (
               <View key={move.id} style={chipCard}>
@@ -756,14 +792,20 @@ export default function MyGymScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["top"]}>
-      <NestableScrollContainer scrollEnabled={!isDraggingSchedule && !isReorderingTiles} contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 48 }}>
+      <NestableScrollContainer
+        scrollEnabled={!isDraggingSchedule && !isReorderingTiles && !isDraggingAssignmentBoard}
+        contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 48 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={{ color: "#FFFFFF", fontSize: 32, fontWeight: "900" }}>My Gym</Text>
-        <Text style={{ color: "#AAB2C2" }}>A premium command center for classes, communication, and student progress.</Text>
-        <Text style={{ color: "#8E96A5", fontSize: 12 }}>Long press any tile to personalize your dashboard layout.</Text>
+        <Text style={{ color: "#AAB2C2", lineHeight: 22 }}>Your command center—classes, comms, homework, roster.</Text>
+        <Text style={{ color: "#6F7785", fontSize: 11, fontWeight: "800", letterSpacing: 0.5 }}>HOLD A SECTION TILE TO REORDER THE DASHBOARD</Text>
         <NestableDraggableFlatList
           data={tileOrder}
           keyExtractor={(item) => item}
           scrollEnabled={false}
+          autoscrollSpeed={0}
+          autoscrollThreshold={0}
           onDragBegin={() => setIsReorderingTiles(true)}
           onRelease={() => setIsReorderingTiles(false)}
           onDragEnd={({ data }) => {
@@ -772,9 +814,19 @@ export default function MyGymScreen() {
           }}
           renderItem={({ item, drag, isActive }) => (
             <ScaleDecorator>
-              <Pressable onLongPress={drag} delayLongPress={160} style={{ marginBottom: 10, opacity: isActive ? 0.92 : 1 }}>
+              <Pressable
+                onLongPress={drag}
+                delayLongPress={280}
+                style={({ pressed }) => ({
+                  marginBottom: 12,
+                  opacity: isActive ? 0.94 : pressed ? 0.88 : 1,
+                })}
+              >
                 {renderTile(item)}
-                <Text style={{ color: "#626A78", fontSize: 11, marginTop: 6 }}>Long press tile to move</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 }}>
+                  <Ionicons name="swap-vertical" size={14} color="#5C6570" />
+                  <Text style={{ color: "#5C6570", fontSize: 11, fontWeight: "700" }}>Hold to move this block</Text>
+                </View>
               </Pressable>
             </ScaleDecorator>
           )}
@@ -803,10 +855,21 @@ function MiniStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function EmptyCard({ text }: { text: string }) {
+function EmptyCard({ text, icon }: { text: string; icon?: keyof typeof Ionicons.glyphMap }) {
   return (
-    <View style={{ borderWidth: 1, borderColor: "#242424", borderRadius: 10, backgroundColor: "#0B0B0B", padding: 12 }}>
-      <Text style={{ color: "#8E96A5" }}>{text}</Text>
+    <View
+      style={{
+        borderWidth: 1,
+        borderColor: "#2A2A2A",
+        borderRadius: 14,
+        backgroundColor: "#0A0A0A",
+        padding: 18,
+        alignItems: "center",
+        gap: 10,
+      }}
+    >
+      {icon ? <Ionicons name={icon} size={36} color="#4A5568" /> : null}
+      <Text style={{ color: "#AAB2C2", textAlign: "center", lineHeight: 22, fontSize: 14 }}>{text}</Text>
     </View>
   );
 }
@@ -851,6 +914,24 @@ const chipCard = {
   padding: 10,
   gap: 4,
 };
+
+const announcementCard = {
+  borderWidth: 1,
+  borderColor: "#2A2A2A",
+  borderRadius: 14,
+  backgroundColor: "#0C0C0C",
+  padding: 14,
+  gap: 4,
+} as const;
+
+const rosterCard = {
+  borderWidth: 1,
+  borderColor: "#2A2A2A",
+  borderRadius: 14,
+  backgroundColor: "#0C0C0C",
+  padding: 14,
+  gap: 8,
+} as const;
 
 const title = {
   color: "#FFFFFF",

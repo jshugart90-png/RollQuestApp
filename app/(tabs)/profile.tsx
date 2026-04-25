@@ -1,7 +1,9 @@
+import { Ionicons } from "@expo/vector-icons";
 import type { Href } from "expo-router";
 import { useFocusEffect, useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import React, { useMemo, useRef, useState } from "react";
-import { Animated, Easing, Modal, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Animated, Easing, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
@@ -351,19 +353,50 @@ export default function ProfileScreen() {
                 {
                   scale: streakPulseAnim.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [1, 1.03],
+                    outputRange: [1, 1.06],
                   }),
                 },
               ],
             },
           ]}
         >
-          <Text style={{ color: "#FFFFFF", fontSize: 40, fontWeight: "900" }}>🔥🔥 {progress.streakCount} Day Streak</Text>
-          <Text style={{ color: "#E7C98A", marginTop: 5, fontSize: 15, fontWeight: "700" }}>{streakMotivation(progress.streakCount)}</Text>
-          <Text style={{ color: "#AAB2C2", marginTop: 6 }}>
-            Longest streak: {progress.longestStreak} days • Sessions logged: {progress.totalSessionsLogged}
-          </Text>
-          <Text style={{ color: "#F8DDA8", marginTop: 4, fontWeight: "800" }}>Show up today, protect the fire.</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 14,
+                backgroundColor: "rgba(200,16,46,0.2)",
+                borderWidth: 1,
+                borderColor: withAlpha(accentColor, 0.45),
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="flame" size={26} color="#FFB347" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#8E96A5", fontSize: 11, fontWeight: "900", letterSpacing: 1 }}>STREAK</Text>
+              <Text style={{ color: "#E7C98A", fontSize: 13, fontWeight: "700" }}>{streakMotivation(progress.streakCount)}</Text>
+            </View>
+          </View>
+          <Text style={{ color: "#FFFFFF", fontSize: 56, fontWeight: "900", letterSpacing: -1 }}>{progress.streakCount}</Text>
+          <Text style={{ color: "#D4B06A", fontSize: 16, fontWeight: "800", marginTop: 2 }}>day{progress.streakCount === 1 ? "" : "s"} on the board</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 14 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons name="trophy-outline" size={18} color="#D4B06A" />
+              <Text style={{ color: "#AAB2C2", fontWeight: "700" }}>
+                Best <Text style={{ color: "#FFFFFF" }}>{progress.longestStreak}</Text> days
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons name="fitness-outline" size={18} color="#8E96A5" />
+              <Text style={{ color: "#AAB2C2", fontWeight: "700" }}>
+                <Text style={{ color: "#FFFFFF" }}>{progress.totalSessionsLogged}</Text> sessions logged
+              </Text>
+            </View>
+          </View>
+          <Text style={{ color: "#F8DDA8", marginTop: 12, fontWeight: "800", fontSize: 14 }}>Train today—keep the flame.</Text>
         </Animated.View>
 
         {linkedGym && !isGymMode ? (
@@ -393,10 +426,28 @@ export default function ProfileScreen() {
         ) : null}
 
         <View style={glassCard}>
-          <Text style={sectionTitle}>Today&apos;s Mission</Text>
-          <Text style={sectionSubtle}>AI picks from your library + pending assignments. Finish strong and protect your streak.</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={sectionTitle}>Today&apos;s mission</Text>
+              <Text style={[sectionSubtle, { marginTop: 4 }]}>Three quick wins. Tap done when you finish.</Text>
+            </View>
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                backgroundColor: withAlpha(accentColor, 0.15),
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: withAlpha(accentColor, 0.35),
+              }}
+            >
+              <Ionicons name="flash" size={22} color={accentColor} />
+            </View>
+          </View>
           <MissionProgressBar completed={todayMissionTasks.filter((task) => completedToday.includes(task.id)).length} total={todayMissionTasks.length} accentColor={accentColor} />
-          <View style={{ gap: 10, marginTop: 10 }}>
+          <View style={{ gap: 10, marginTop: 12 }}>
             {todayMissionTasks.map((task) => {
               const done = completedToday.includes(task.id);
               return (
@@ -404,26 +455,32 @@ export default function ProfileScreen() {
                   key={task.id}
                   style={{
                     borderWidth: 1,
-                    borderColor: done ? withAlpha("#47B96E", 0.9) : "#262626",
-                    borderRadius: 12,
-                    backgroundColor: done ? "rgba(71,185,110,0.12)" : "#0A0A0A",
-                    padding: 12,
+                    borderColor: done ? withAlpha("#47B96E", 0.85) : "#262626",
+                    borderRadius: 14,
+                    backgroundColor: done ? "rgba(71,185,110,0.1)" : "#0A0A0A",
+                    padding: 14,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
                   }}
                 >
-                  <Text style={{ color: "#EAF0FC", fontWeight: "700" }}>{task.label}</Text>
+                  <Ionicons name={done ? "checkmark-circle" : "ellipse-outline"} size={26} color={done ? "#47B96E" : "#4B5563"} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: "#EAF0FC", fontWeight: "700", fontSize: 15 }}>{task.label}</Text>
+                  </View>
                   <Pressable
                     onPress={() => void onToggleTask(task)}
-                    style={{
-                      marginTop: 8,
+                    style={({ pressed }) => ({
                       borderWidth: 1,
                       borderColor: done ? "#2A6B3E" : accentColor,
-                      borderRadius: 10,
-                      paddingVertical: 8,
-                      alignItems: "center",
-                      backgroundColor: done ? "rgba(35,85,53,0.45)" : withAlpha(accentColor, 0.24),
-                    }}
+                      borderRadius: 999,
+                      paddingVertical: 10,
+                      paddingHorizontal: 16,
+                      backgroundColor: done ? "rgba(35,85,53,0.45)" : withAlpha(accentColor, 0.22),
+                      opacity: pressed ? 0.85 : 1,
+                    })}
                   >
-                    <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{done ? "Completed ✓" : "Mark Complete"}</Text>
+                    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 13 }}>{done ? "Done" : "Do it"}</Text>
                   </Pressable>
                 </View>
               );
@@ -432,31 +489,47 @@ export default function ProfileScreen() {
         </View>
 
         <View style={glassCard}>
-          <Text style={sectionTitle}>Ready for Review</Text>
-          <Text style={sectionSubtle}>Ordered by likely forgetting risk: days since review + recall strength.</Text>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={sectionTitle}>Review past material</Text>
+              <Text style={[sectionSubtle, { marginTop: 4 }]}>Spaced reps—what you&apos;re most likely to forget first.</Text>
+            </View>
+            <Ionicons name="school-outline" size={26} color="#D4B06A" />
+          </View>
           {reviewQueue.length > 0 ? (
             <Pressable
               onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setSessionQueue([...reviewQueue]);
                 setSessionTotalCount(reviewQueue.length);
                 setReviewSessionOpen(true);
               }}
-              style={{
-                marginTop: 10,
+              style={({ pressed }) => ({
+                marginTop: 12,
                 borderWidth: 1,
-                borderColor: withAlpha("#D4B06A", 0.8),
-                backgroundColor: "rgba(212,176,106,0.14)",
-                borderRadius: 10,
-                paddingVertical: 10,
+                borderColor: withAlpha("#D4B06A", 0.85),
+                backgroundColor: pressed ? "rgba(212,176,106,0.22)" : "rgba(212,176,106,0.14)",
+                borderRadius: 14,
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+                flexDirection: "row",
                 alignItems: "center",
-              }}
+                justifyContent: "center",
+                gap: 10,
+              })}
             >
-              <Text style={{ color: "#F4E6C4", fontWeight: "900" }}>Start Review Session</Text>
+              <Ionicons name="play-circle" size={22} color="#F4E6C4" />
+              <Text style={{ color: "#F4E6C4", fontWeight: "900", fontSize: 16 }}>Start review ({reviewQueue.length})</Text>
             </Pressable>
           ) : null}
-          <View style={{ gap: 10, marginTop: 10 }}>
+          <View style={{ gap: 10, marginTop: 12 }}>
             {readyForReview.length === 0 ? (
-              <Text style={{ color: "#AAB2C2" }}>Add techniques to My Library to unlock spaced repetition reviews.</Text>
+              <View style={{ alignItems: "center", paddingVertical: 8, gap: 8 }}>
+                <Ionicons name="book-outline" size={40} color="#4A5568" />
+                <Text style={{ color: "#AAB2C2", textAlign: "center", lineHeight: 22 }}>
+                  Add moves to My Library to unlock smart reviews.
+                </Text>
+              </View>
             ) : (
               readyForReview.map((technique) => {
                 const days = daysSince(progress.lastReviewedByTechniqueId[technique.id]);
@@ -480,17 +553,17 @@ export default function ProfileScreen() {
                     <Text style={{ color: "#8E96A5", marginTop: 2 }}>Recall strength: {strength}/5</Text>
                     <Pressable
                       onPress={() => void onReviewNow(technique.id)}
-                      style={{
-                        marginTop: 8,
+                      style={({ pressed }) => ({
+                        marginTop: 10,
                         borderWidth: 1,
                         borderColor: accentColor,
-                        borderRadius: 10,
-                        paddingVertical: 8,
+                        borderRadius: 12,
+                        paddingVertical: 11,
                         alignItems: "center",
-                        backgroundColor: withAlpha(accentColor, 0.2),
-                      }}
+                        backgroundColor: withAlpha(accentColor, pressed ? 0.32 : 0.2),
+                      })}
                     >
-                      <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Review Now</Text>
+                      <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Quick review</Text>
                     </Pressable>
                   </View>
                 );
@@ -517,8 +590,8 @@ export default function ProfileScreen() {
         </View>
 
         <View style={glassCard}>
-          <Text style={sectionTitle}>Daily Flow Shortcuts</Text>
-          <Text style={sectionSubtle}>Move from planning to drilling to notes in seconds.</Text>
+          <Text style={sectionTitle}>Shortcuts</Text>
+          <Text style={sectionSubtle}>Jump to tools you use daily.</Text>
           <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
             <ShortcutButton label="Open Notes" onPress={() => router.push("/notes" as Href)} accentColor={accentColor} />
             <ShortcutButton label="My Library" onPress={() => router.push("/library" as Href)} accentColor={accentColor} />
@@ -665,15 +738,16 @@ function ShortcutButton({ label, onPress, accentColor }: { label: string; onPres
   return (
     <Pressable
       onPress={onPress}
-      style={{
+      style={({ pressed }) => ({
         flex: 1,
         borderWidth: 1,
         borderColor: withAlpha(accentColor, 0.7),
-        backgroundColor: withAlpha(accentColor, 0.14),
-        borderRadius: 10,
-        paddingVertical: 10,
+        backgroundColor: withAlpha(accentColor, pressed ? 0.24 : 0.14),
+        borderRadius: 12,
+        paddingVertical: 11,
         alignItems: "center",
-      }}
+        opacity: pressed ? 0.92 : 1,
+      })}
     >
       <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 12 }}>{label}</Text>
     </Pressable>
@@ -683,12 +757,12 @@ function ShortcutButton({ label, onPress, accentColor }: { label: string; onPres
 function MissionProgressBar({ completed, total, accentColor }: { completed: number; total: number; accentColor: string }) {
   const ratio = total > 0 ? completed / total : 0;
   return (
-    <View style={{ marginTop: 10 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-        <Text style={{ color: "#BFC8D8", fontWeight: "700" }}>
-          {completed}/{total} missions complete
+    <View style={{ marginTop: 12 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
+        <Text style={{ color: "#BFC8D8", fontWeight: "800" }}>
+          {completed}/{total} done
         </Text>
-        <Text style={{ color: "#D4B06A", fontWeight: "800" }}>{Math.round(ratio * 100)}%</Text>
+        <Text style={{ color: "#D4B06A", fontWeight: "900" }}>{Math.round(ratio * 100)}%</Text>
       </View>
       <View style={{ height: 9, borderRadius: 999, backgroundColor: "#1A1A1A", overflow: "hidden" }}>
         <View style={{ width: `${Math.max(4, ratio * 100)}%`, height: "100%", backgroundColor: withAlpha(accentColor, 0.95) }} />
@@ -756,43 +830,64 @@ function ReviewSessionModal({
           }}
         >
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900" }}>Review Session</Text>
-            <Pressable onPress={onClose} hitSlop={12}>
+            <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900" }}>Review</Text>
+            <Pressable onPress={onClose} hitSlop={12} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
               <Text style={{ color: "#AAB2C2", fontWeight: "800" }}>Close</Text>
             </Pressable>
           </View>
           {current ? (
-            <View style={{ borderWidth: 1, borderColor: "#232323", borderRadius: 14, padding: 14, backgroundColor: "#0F0F0F", gap: 10 }}>
-              <Text style={{ color: "#8E96A5", fontWeight: "700" }}>
-                Technique {positionInSession} of {sessionTotal}
+            <View style={{ borderWidth: 1, borderColor: "#232323", borderRadius: 16, padding: 16, backgroundColor: "#0F0F0F", gap: 12 }}>
+              <View style={{ flexDirection: "row", gap: 6, justifyContent: "center", marginBottom: 4 }}>
+                {Array.from({ length: sessionTotal }, (_, i) => {
+                  const n = i + 1;
+                  const active = n === positionInSession;
+                  const done = n < positionInSession;
+                  return (
+                    <View
+                      key={`dot-${i}`}
+                      style={{
+                        width: active ? 12 : 6,
+                        height: 6,
+                        borderRadius: 999,
+                        backgroundColor: done ? withAlpha(accentColor, 0.45) : active ? accentColor : "#2A2A2A",
+                      }}
+                    />
+                  );
+                })}
+              </View>
+              <Text style={{ color: "#8E96A5", fontWeight: "800", textAlign: "center", fontSize: 12 }}>
+                {positionInSession} / {sessionTotal}
               </Text>
-              <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "900" }}>{current.technique.name}</Text>
-              <Text style={{ color: "#B6C0D0" }}>{current.technique.position}</Text>
-              <Text style={{ color: "#8E96A5" }}>
-                {current.days >= 9999 ? "Never reviewed" : `${current.days} day${current.days === 1 ? "" : "s"} since review`} • Strength {current.strength}/5
+              <Text style={{ color: "#FFFFFF", fontSize: 24, fontWeight: "900", textAlign: "center" }}>{current.technique.name}</Text>
+              <Text style={{ color: "#B6C0D0", textAlign: "center" }}>{current.technique.position}</Text>
+              <Text style={{ color: "#6F7785", textAlign: "center", fontSize: 13 }}>
+                {current.days >= 9999 ? "Not reviewed yet" : `${current.days}d since review`} · Recall {current.strength}/5
               </Text>
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() => onOpenTechnique(current.technique.id)}
-                style={{
+              <Pressable
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  onOpenTechnique(current.technique.id);
+                }}
+                style={({ pressed }) => ({
                   borderWidth: 1,
-                  borderColor: withAlpha(accentColor, 0.8),
-                  borderRadius: 12,
-                  minHeight: 48,
+                  borderColor: withAlpha(accentColor, 0.85),
+                  borderRadius: 14,
+                  minHeight: 50,
                   paddingVertical: 12,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: withAlpha(accentColor, 0.16),
-                }}
+                  backgroundColor: withAlpha(accentColor, pressed ? 0.28 : 0.16),
+                })}
               >
-                <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>Open Technique Detail</Text>
-              </TouchableOpacity>
-              <View style={{ flexDirection: "column", gap: 10, marginTop: 4 }}>
-                <TouchableOpacity
-                  activeOpacity={0.88}
-                  onPress={() => onRemembered(current.technique.id)}
-                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                  style={{
+                <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Open technique</Text>
+              </Pressable>
+              <View style={{ flexDirection: "column", gap: 10, marginTop: 6 }}>
+                <Pressable
+                  onPress={() => {
+                    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    onRemembered(current.technique.id);
+                  }}
+                  style={({ pressed }) => ({
                     borderWidth: 1,
                     borderColor: "#2A7F48",
                     borderRadius: 14,
@@ -801,16 +896,18 @@ function ReviewSessionModal({
                     paddingHorizontal: 14,
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: "rgba(58,134,89,0.28)",
-                  }}
+                    backgroundColor: pressed ? "rgba(58,134,89,0.42)" : "rgba(58,134,89,0.28)",
+                  })}
                 >
-                  <Text style={{ color: "#E9FFF1", fontWeight: "900", fontSize: 16 }}>I Remembered It</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  activeOpacity={0.88}
-                  onPress={() => onNeedPractice(current.technique.id)}
-                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                  style={{
+                  <Text style={{ color: "#E9FFF1", fontWeight: "900", fontSize: 16 }}>Nailed it</Text>
+                  <Text style={{ color: "#9BC9A8", fontSize: 12, marginTop: 2 }}>Boost recall strength</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                    onNeedPractice(current.technique.id);
+                  }}
+                  style={({ pressed }) => ({
                     borderWidth: 1,
                     borderColor: "#A8732E",
                     borderRadius: 14,
@@ -819,33 +916,38 @@ function ReviewSessionModal({
                     paddingHorizontal: 14,
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: "rgba(168,115,46,0.26)",
-                  }}
+                    backgroundColor: pressed ? "rgba(168,115,46,0.38)" : "rgba(168,115,46,0.26)",
+                  })}
                 >
-                  <Text style={{ color: "#FFEFD9", fontWeight: "900", fontSize: 16 }}>Need More Practice</Text>
-                </TouchableOpacity>
+                  <Text style={{ color: "#FFEFD9", fontWeight: "900", fontSize: 16 }}>Need reps</Text>
+                  <Text style={{ color: "#D4B896", fontSize: 12, marginTop: 2 }}>We&apos;ll surface it sooner</Text>
+                </Pressable>
               </View>
             </View>
           ) : (
-            <View style={{ borderWidth: 1, borderColor: "#232323", borderRadius: 14, padding: 16, backgroundColor: "#0F0F0F" }}>
-              <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 18 }}>Session complete ✅</Text>
-              <Text style={{ color: "#AAB2C2", marginTop: 6 }}>Great work. You just reinforced your recall map for the week.</Text>
-              <TouchableOpacity
-                activeOpacity={0.88}
-                onPress={onClose}
-                style={{
-                  marginTop: 14,
+            <View style={{ borderWidth: 1, borderColor: "#232323", borderRadius: 16, padding: 20, backgroundColor: "#0F0F0F", alignItems: "center", gap: 10 }}>
+              <Ionicons name="sparkles" size={40} color="#D4B06A" />
+              <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 20 }}>Session complete</Text>
+              <Text style={{ color: "#AAB2C2", textAlign: "center", lineHeight: 22 }}>Stacked reps today. Come back when your queue refills.</Text>
+              <Pressable
+                onPress={() => {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onClose();
+                }}
+                style={({ pressed }) => ({
+                  marginTop: 8,
                   borderRadius: 14,
                   minHeight: 52,
+                  width: "100%",
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: withAlpha(accentColor, 0.22),
+                  backgroundColor: withAlpha(accentColor, pressed ? 0.32 : 0.22),
                   borderWidth: 1,
                   borderColor: withAlpha(accentColor, 0.55),
-                }}
+                })}
               >
                 <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Done</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           )}
         </View>
