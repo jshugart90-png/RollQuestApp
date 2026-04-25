@@ -28,6 +28,8 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={theme}>
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ title: "RollQuest" }} />
+          <Stack.Screen name="onboarding" options={{ title: "Welcome" }} />
           <Stack.Screen
             name="(tabs)"
             options={{

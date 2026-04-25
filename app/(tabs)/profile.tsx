@@ -1,26 +1,36 @@
 import type { Href } from "expo-router";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useMemo, useRef, useState } from "react";
-import { Animated, Easing, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Animated, Easing, Modal, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
 import { useAssignmentsStore } from "../store/assignments";
 import { useGymStore, withAlpha } from "../store/gym";
+import { pendingRequestsForGym, useTechniqueRequestStore } from "../store/techniqueRequests";
 import {
   CURRICULUM_BELTS,
   defaultProgress,
   loadProgress,
   markTechniqueReviewed,
   rateTechniqueRecall,
+  setTechniqueMasteryLevel,
   toggleDailyTaskCompleted,
   updateCurrentBelt,
   updateProfileName,
   type BeltLevel,
+  type TechniqueMasteryLevel,
   type UserProgress,
 } from "../store/progress";
 
 const BELTS = CURRICULUM_BELTS as unknown as BeltLevel[];
+
+type ReviewQueueItem = {
+  technique: { id: string; name: string; position: string };
+  days: number;
+  strength: number;
+  score: number;
+};
 
 const WARMUP_LIBRARY = [
   "Warm-up: Shrimping (3 x 30 seconds each side)",
@@ -35,7 +45,8 @@ export default function ProfileScreen() {
   const [draftProfileName, setDraftProfileName] = useState("Student");
   const [celebrationText, setCelebrationText] = useState("");
   const [reviewSessionOpen, setReviewSessionOpen] = useState(false);
-  const [reviewIndex, setReviewIndex] = useState(0);
+  const [sessionQueue, setSessionQueue] = useState<ReviewQueueItem[]>([]);
+  const [sessionTotalCount, setSessionTotalCount] = useState(0);
   const celebrationAnim = useRef(new Animated.Value(0)).current;
   const streakPulseAnim = useRef(new Animated.Value(0)).current;
   const previousStreakRef = useRef(defaultProgress.streakCount);
@@ -47,6 +58,7 @@ export default function ProfileScreen() {
   const gymName = useGymStore((state) => state.gymName);
   const techniques = useResolvedTechniques();
   const assignments = useAssignmentsStore((state) => state.assignments);
+  const techniqueRequests = useTechniqueRequestStore((state) => state.requests);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -88,6 +100,10 @@ export default function ProfileScreen() {
   }
 
   const activeGymName = isGymMode ? gymName : linkedGym?.gymName;
+  const pendingGymRequests = useMemo(() => {
+    if (!linkedGym || isGymMode) return 0;
+    return pendingRequestsForGym(linkedGym.gymId, techniqueRequests).length;
+  }, [isGymMode, linkedGym, techniqueRequests]);
   const todayKey = toDateKey(new Date());
   const completedToday = progress.completedDailyTaskIdsByDate[todayKey] ?? [];
 
@@ -144,7 +160,7 @@ export default function ProfileScreen() {
   ].slice(0, 4);
 
   const readyForReview = reviewPriority.slice(0, 6);
-  const reviewQueue = useMemo(() => {
+  const reviewQueue: ReviewQueueItem[] = useMemo(() => {
     const candidates = candidateTechniques.map((technique) => {
       const days = daysSince(progress.lastReviewedByTechniqueId[technique.id]);
       const strength = progress.reviewStrengthByTechniqueId[technique.id] ?? 2;
@@ -206,18 +222,29 @@ export default function ProfileScreen() {
   }
 
   async function onRateRecall(techniqueId: string, remembered: boolean) {
-    const updated = await rateTechniqueRecall(techniqueId, remembered);
+    let updated = await rateTechniqueRecall(techniqueId, remembered);
+    const currentMastery: TechniqueMasteryLevel = updated.masteryByTechniqueId[techniqueId] ?? "novice";
+    const nextMastery: TechniqueMasteryLevel = remembered
+      ? currentMastery === "novice"
+        ? "proficient"
+        : "master"
+      : currentMastery === "master"
+        ? "proficient"
+        : "novice";
+    if (nextMastery !== currentMastery) {
+      updated = await setTechniqueMasteryLevel(techniqueId, nextMastery);
+    }
     if (updated.streakCount > progress.streakCount) {
       triggerStreakCelebration(updated.streakCount);
     }
     previousStreakRef.current = updated.streakCount;
     setProgress(updated);
+    setSessionQueue((q) => q.filter((item) => item.technique.id !== techniqueId));
     if (remembered) {
       triggerCelebration("Locked in. Your recall strength just improved.");
     } else {
       triggerCelebration("Noted. We will bring this one back sooner.");
     }
-    setReviewIndex((idx) => Math.min(idx + 1, Math.max(0, reviewQueue.length - 1)));
   }
 
   function triggerCelebration(message: string) {
@@ -261,8 +288,13 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#030303" }} edges={["top"]}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 34 }}>
+    <>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#030303" }} edges={["top"]}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 34 }}
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={heroCard}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1 }}>
@@ -334,6 +366,32 @@ export default function ProfileScreen() {
           <Text style={{ color: "#F8DDA8", marginTop: 4, fontWeight: "800" }}>Show up today, protect the fire.</Text>
         </Animated.View>
 
+        {linkedGym && !isGymMode ? (
+          <View style={[glassCard, { borderColor: withAlpha(accentColor, 0.35) }]}>
+            <Text style={sectionTitle}>Request techniques from {linkedGym.gymName}</Text>
+            <Text style={sectionSubtle}>
+              Open the Library and tap Request from gym on any technique card. Coaches track open items in My Gym.
+            </Text>
+            <Text style={{ color: "#D4B06A", fontWeight: "800", marginTop: 4 }}>
+              {pendingGymRequests} open request{pendingGymRequests === 1 ? "" : "s"} pending with your gym
+            </Text>
+            <Pressable
+              onPress={() => router.push("/library" as Href)}
+              style={{
+                marginTop: 10,
+                borderRadius: 12,
+                paddingVertical: 12,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: withAlpha(accentColor, 0.65),
+                backgroundColor: withAlpha(accentColor, 0.16),
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Go to Library</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={glassCard}>
           <Text style={sectionTitle}>Today&apos;s Mission</Text>
           <Text style={sectionSubtle}>AI picks from your library + pending assignments. Finish strong and protect your streak.</Text>
@@ -379,7 +437,8 @@ export default function ProfileScreen() {
           {reviewQueue.length > 0 ? (
             <Pressable
               onPress={() => {
-                setReviewIndex(0);
+                setSessionQueue([...reviewQueue]);
+                setSessionTotalCount(reviewQueue.length);
                 setReviewSessionOpen(true);
               }}
               style={{
@@ -495,54 +554,61 @@ export default function ProfileScreen() {
             })}
           </View>
         </View>
-      </ScrollView>
+        </ScrollView>
 
-      <Animated.View
-        pointerEvents="none"
-        style={{
-          position: "absolute",
-          left: 16,
-          right: 16,
-          bottom: 22,
-          opacity: celebrationAnim,
-          transform: [
-            {
-              translateY: celebrationAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [20, 0],
-              }),
-            },
-          ],
-        }}
-      >
-        <View
+        <Animated.View
+          pointerEvents="none"
           style={{
-            borderWidth: 1,
-            borderColor: withAlpha("#47B96E", 0.9),
-            borderRadius: 12,
-            backgroundColor: "rgba(39,98,61,0.85)",
-            paddingVertical: 10,
-            paddingHorizontal: 12,
+            position: "absolute",
+            left: 16,
+            right: 16,
+            bottom: 22,
+            opacity: celebrationAnim,
+            transform: [
+              {
+                translateY: celebrationAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              },
+            ],
           }}
         >
-          <Text style={{ color: "#EAFBEF", fontWeight: "900", textAlign: "center" }}>✅ {celebrationText}</Text>
-        </View>
-      </Animated.View>
-      <StreakConfetti progress={streakPulseAnim} />
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: withAlpha("#47B96E", 0.9),
+              borderRadius: 12,
+              backgroundColor: "rgba(39,98,61,0.85)",
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+            }}
+          >
+            <Text style={{ color: "#EAFBEF", fontWeight: "900", textAlign: "center" }}>✅ {celebrationText}</Text>
+          </View>
+        </Animated.View>
+        <StreakConfetti progress={streakPulseAnim} />
+      </SafeAreaView>
       <ReviewSessionModal
         open={reviewSessionOpen}
-        onClose={() => setReviewSessionOpen(false)}
-        queue={reviewQueue}
-        index={reviewIndex}
+        onClose={() => {
+          setReviewSessionOpen(false);
+          setSessionQueue([]);
+          setSessionTotalCount(0);
+        }}
+        queue={sessionQueue}
+        sessionTotal={sessionTotalCount}
         onRemembered={(id) => void onRateRecall(id, true)}
         onNeedPractice={(id) => void onRateRecall(id, false)}
         onOpenTechnique={(id) => {
           setReviewSessionOpen(false);
+          setSessionQueue([]);
+          setSessionTotalCount(0);
           router.push(`/technique/${id}` as Href);
         }}
         accentColor={accentColor}
       />
-    </SafeAreaView>
+    </>
   );
 }
 
@@ -635,7 +701,7 @@ function ReviewSessionModal({
   open,
   onClose,
   queue,
-  index,
+  sessionTotal,
   onRemembered,
   onNeedPractice,
   onOpenTechnique,
@@ -643,50 +709,143 @@ function ReviewSessionModal({
 }: {
   open: boolean;
   onClose: () => void;
-  queue: { technique: { id: string; name: string; position: string }; days: number; strength: number; score: number }[];
-  index: number;
+  queue: ReviewQueueItem[];
+  sessionTotal: number;
   onRemembered: (id: string) => void;
   onNeedPractice: (id: string) => void;
   onOpenTechnique: (id: string) => void;
   accentColor: string;
 }) {
-  const current = queue[index];
+  const insets = useSafeAreaInsets();
+  const current = queue[0];
+  const positionInSession = current && sessionTotal > 0 ? sessionTotal - queue.length + 1 : 0;
+
   return (
-    <Modal visible={open} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.82)", justifyContent: "flex-end" }}>
-        <View style={{ backgroundColor: "#0A0A0A", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, gap: 10 }}>
+    <Modal
+      visible={open}
+      animationType="slide"
+      transparent
+      statusBarTranslucent
+      presentationStyle={Platform.OS === "ios" ? "overFullScreen" : undefined}
+      onRequestClose={onClose}
+    >
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.82)",
+          zIndex: 99999,
+          elevation: Platform.OS === "android" ? 32 : 0,
+        }}
+      >
+        <Pressable
+          style={{ flex: 1 }}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss review session"
+        />
+        <View
+          style={{
+            backgroundColor: "#0A0A0A",
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            padding: 16,
+            gap: 12,
+            paddingBottom: Math.max(insets.bottom, 16) + 8,
+            borderWidth: 1,
+            borderColor: "#232323",
+          }}
+        >
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900" }}>Review Session</Text>
-            <Pressable onPress={onClose}>
+            <Pressable onPress={onClose} hitSlop={12}>
               <Text style={{ color: "#AAB2C2", fontWeight: "800" }}>Close</Text>
             </Pressable>
           </View>
           {current ? (
-            <View style={{ borderWidth: 1, borderColor: "#232323", borderRadius: 14, padding: 14, backgroundColor: "#0F0F0F", gap: 8 }}>
+            <View style={{ borderWidth: 1, borderColor: "#232323", borderRadius: 14, padding: 14, backgroundColor: "#0F0F0F", gap: 10 }}>
               <Text style={{ color: "#8E96A5", fontWeight: "700" }}>
-                Technique {index + 1} of {queue.length}
+                Technique {positionInSession} of {sessionTotal}
               </Text>
               <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "900" }}>{current.technique.name}</Text>
               <Text style={{ color: "#B6C0D0" }}>{current.technique.position}</Text>
               <Text style={{ color: "#8E96A5" }}>
                 {current.days >= 9999 ? "Never reviewed" : `${current.days} day${current.days === 1 ? "" : "s"} since review`} • Strength {current.strength}/5
               </Text>
-              <Pressable onPress={() => onOpenTechnique(current.technique.id)} style={{ borderWidth: 1, borderColor: withAlpha(accentColor, 0.8), borderRadius: 10, paddingVertical: 8, alignItems: "center", backgroundColor: withAlpha(accentColor, 0.16) }}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => onOpenTechnique(current.technique.id)}
+                style={{
+                  borderWidth: 1,
+                  borderColor: withAlpha(accentColor, 0.8),
+                  borderRadius: 12,
+                  minHeight: 48,
+                  paddingVertical: 12,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: withAlpha(accentColor, 0.16),
+                }}
+              >
                 <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>Open Technique Detail</Text>
-              </Pressable>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <Pressable onPress={() => onRemembered(current.technique.id)} style={{ flex: 1, borderWidth: 1, borderColor: "#2A7F48", borderRadius: 10, paddingVertical: 10, alignItems: "center", backgroundColor: "rgba(58,134,89,0.22)" }}>
-                  <Text style={{ color: "#E9FFF1", fontWeight: "900" }}>I Remembered It</Text>
-                </Pressable>
-                <Pressable onPress={() => onNeedPractice(current.technique.id)} style={{ flex: 1, borderWidth: 1, borderColor: "#A8732E", borderRadius: 10, paddingVertical: 10, alignItems: "center", backgroundColor: "rgba(168,115,46,0.2)" }}>
-                  <Text style={{ color: "#FFEFD9", fontWeight: "900" }}>Need More Practice</Text>
-                </Pressable>
+              </TouchableOpacity>
+              <View style={{ flexDirection: "column", gap: 10, marginTop: 4 }}>
+                <TouchableOpacity
+                  activeOpacity={0.88}
+                  onPress={() => onRemembered(current.technique.id)}
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "#2A7F48",
+                    borderRadius: 14,
+                    minHeight: 56,
+                    paddingVertical: 16,
+                    paddingHorizontal: 14,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "rgba(58,134,89,0.28)",
+                  }}
+                >
+                  <Text style={{ color: "#E9FFF1", fontWeight: "900", fontSize: 16 }}>I Remembered It</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.88}
+                  onPress={() => onNeedPractice(current.technique.id)}
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "#A8732E",
+                    borderRadius: 14,
+                    minHeight: 56,
+                    paddingVertical: 16,
+                    paddingHorizontal: 14,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "rgba(168,115,46,0.26)",
+                  }}
+                >
+                  <Text style={{ color: "#FFEFD9", fontWeight: "900", fontSize: 16 }}>Need More Practice</Text>
+                </TouchableOpacity>
               </View>
             </View>
           ) : (
             <View style={{ borderWidth: 1, borderColor: "#232323", borderRadius: 14, padding: 16, backgroundColor: "#0F0F0F" }}>
               <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 18 }}>Session complete ✅</Text>
               <Text style={{ color: "#AAB2C2", marginTop: 6 }}>Great work. You just reinforced your recall map for the week.</Text>
+              <TouchableOpacity
+                activeOpacity={0.88}
+                onPress={onClose}
+                style={{
+                  marginTop: 14,
+                  borderRadius: 14,
+                  minHeight: 52,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: withAlpha(accentColor, 0.22),
+                  borderWidth: 1,
+                  borderColor: withAlpha(accentColor, 0.55),
+                }}
+              >
+                <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Done</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>

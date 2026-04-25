@@ -11,6 +11,8 @@ export type SessionNote = {
   updatedAt: string;
   /** Full technique snapshots saved with the note */
   techniques: Technique[];
+  /** Optional gym scope for future multi-gym note boards. */
+  gymScopeId?: string;
 };
 
 type LegacyNote = {
@@ -34,12 +36,15 @@ function migrateNote(note: LegacyNote): SessionNote {
       if (found) techniques.push({ ...found });
     }
   }
+  const maybeScope = (note as { gymScopeId?: unknown }).gymScopeId;
+  const gymScopeId = typeof maybeScope === "string" && maybeScope.trim() ? maybeScope.trim() : undefined;
   return {
     id: note.id,
     text: note.text ?? "",
     createdAt: note.createdAt,
     updatedAt: note.updatedAt ?? note.createdAt,
     techniques,
+    gymScopeId,
   };
 }
 

@@ -16,6 +16,8 @@ export function GlobalQuickFab() {
 
   if (!pathname.startsWith("/")) return null;
 
+  const fabBottom = pathname.includes("profile") ? 196 : 84;
+
   async function onLogSession() {
     const updated = await registerActivity();
     setOpen(false);
@@ -39,7 +41,7 @@ export function GlobalQuickFab() {
   }
 
   return (
-    <View pointerEvents="box-none" style={{ position: "absolute", right: 16, bottom: 84, zIndex: 20 }}>
+    <View pointerEvents="box-none" style={{ position: "absolute", right: 16, bottom: fabBottom, zIndex: 20 }}>
       {open ? (
         <View style={{ alignItems: "flex-end", gap: 8, marginBottom: 10 }}>
           <FabAction label="Log a Session" icon="flame" onPress={() => void onLogSession()} accentColor={accentColor} />

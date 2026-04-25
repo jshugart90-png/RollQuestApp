@@ -134,6 +134,8 @@ type GymState = {
   accentColor: string;
   logoUrl?: string;
   isGymMode: boolean;
+  /** First-launch onboarding; missing in persisted data defaults to true for existing installs. */
+  hasCompletedOnboarding: boolean;
   schedule: GymScheduleClass[];
   announcements: GymAnnouncement[];
   techniqueOverrides: GymTechniqueOverrides;
@@ -164,6 +166,7 @@ type GymState = {
   leaveLinkedGym: () => void;
   setMyGymTileOrder: (order: string[]) => void;
   resetGymSettings: () => void;
+  completeOnboarding: () => void;
 };
 
 function createGymId(): string {
@@ -240,6 +243,7 @@ export const useGymStore = create<GymState>()(
       accentColor: DEFAULT_ACCENT_COLOR,
       logoUrl: undefined,
       isGymMode: false,
+      hasCompletedOnboarding: false,
       schedule: DEFAULT_SCHEDULE,
       announcements: [],
       techniqueOverrides: emptyOverrides,
@@ -252,6 +256,7 @@ export const useGymStore = create<GymState>()(
         "assignments",
         "completion",
         "roster",
+        "requests",
         "videos",
         "schedule",
         "customMoves",
@@ -425,6 +430,7 @@ export const useGymStore = create<GymState>()(
       },
       leaveLinkedGym: () => set({ linkedGym: undefined }),
       setMyGymTileOrder: (order) => set({ myGymTileOrder: order }),
+      completeOnboarding: () => set({ hasCompletedOnboarding: true }),
       resetGymSettings: () =>
         set({
           gymId: createGymId(),
@@ -432,6 +438,7 @@ export const useGymStore = create<GymState>()(
           accentColor: DEFAULT_ACCENT_COLOR,
           logoUrl: undefined,
           isGymMode: false,
+          hasCompletedOnboarding: true,
           schedule: DEFAULT_SCHEDULE,
           announcements: [],
           techniqueOverrides: {},
@@ -444,6 +451,7 @@ export const useGymStore = create<GymState>()(
             "assignments",
             "completion",
             "roster",
+            "requests",
             "videos",
             "schedule",
             "customMoves",
@@ -462,6 +470,7 @@ export const useGymStore = create<GymState>()(
         accentColor: state.accentColor,
         logoUrl: state.logoUrl,
         isGymMode: state.isGymMode,
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
         schedule: state.schedule,
         announcements: state.announcements,
         techniqueOverrides: state.techniqueOverrides,
@@ -480,6 +489,8 @@ export const useGymStore = create<GymState>()(
           accentColor: typeof p.accentColor === "string" ? normalizeHexColor(p.accentColor) : current.accentColor,
           logoUrl: typeof p.logoUrl === "string" && p.logoUrl.trim() ? p.logoUrl.trim() : undefined,
           isGymMode: typeof p.isGymMode === "boolean" ? p.isGymMode : current.isGymMode,
+          hasCompletedOnboarding:
+            typeof p.hasCompletedOnboarding === "boolean" ? p.hasCompletedOnboarding : true,
           schedule: Array.isArray(p.schedule) ? p.schedule : current.schedule,
           announcements: Array.isArray(p.announcements)
             ? p.announcements

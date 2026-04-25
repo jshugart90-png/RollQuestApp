@@ -1,10 +1,11 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { POSITION_TABS, type PositionTab } from "../data/techniques";
 import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
 import { useGymStore, withAlpha } from "../store/gym";
+import { useTechniqueRequestStore } from "../store/techniqueRequests";
 import {
   CURRICULUM_BELTS,
   defaultProgress,
@@ -22,6 +23,9 @@ type PositionFilter = "All" | PositionTab;
 export default function LibraryScreen() {
   const router = useRouter();
   const accentColor = useGymStore((state) => state.accentColor);
+  const isGymMode = useGymStore((state) => state.isGymMode);
+  const linkedGym = useGymStore((state) => state.linkedGym);
+  const submitTechniqueRequest = useTechniqueRequestStore((s) => s.submitRequest);
   const techniques = useResolvedTechniques();
   const [activePosition, setActivePosition] = useState<PositionFilter>("All");
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
@@ -224,9 +228,27 @@ export default function LibraryScreen() {
         </Text>
       </View>
 
+      {linkedGym && !isGymMode ? (
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: withAlpha(accentColor, 0.45),
+            backgroundColor: withAlpha(accentColor, 0.08),
+            borderRadius: 12,
+            padding: 12,
+          }}
+        >
+          <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Linked gym: {linkedGym.gymName}</Text>
+          <Text style={{ color: "#AAB2C2", marginTop: 4, lineHeight: 20 }}>
+            Request techniques from any card below—coaches see them in My Gym → Technique requests.
+          </Text>
+        </View>
+      ) : null}
+
       {searched.map((tech) => {
         const mastered = progress.learnedTechniqueIds.includes(tech.id);
         const masteryLevel = progress.masteryByTechniqueId[tech.id] ?? "novice";
+        const canRequest = Boolean(linkedGym && !isGymMode);
         return (
           <View
             key={tech.id}
@@ -278,6 +300,43 @@ export default function LibraryScreen() {
                 })}
               </View>
             </View>
+            {canRequest ? (
+              <Pressable
+                onPress={() => {
+                  Alert.alert("Request from gym?", `Send "${tech.name}" to ${linkedGym?.gymName ?? "your gym"} coaches?`, [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Send request",
+                      onPress: () => {
+                        if (!linkedGym) return;
+                        const created = submitTechniqueRequest({
+                          gymId: linkedGym.gymId,
+                          techniqueId: tech.id,
+                          techniqueName: tech.name,
+                          studentName: progress.profileName,
+                        });
+                        if (created) {
+                          Alert.alert("Request sent", "Your coaches will see this under Technique requests in My Gym.");
+                        } else {
+                          Alert.alert("Already pending", "You already have an open request for this technique.");
+                        }
+                      },
+                    },
+                  ]);
+                }}
+                style={{
+                  marginTop: 4,
+                  borderWidth: 1,
+                  borderColor: withAlpha(accentColor, 0.55),
+                  borderRadius: 12,
+                  paddingVertical: 12,
+                  alignItems: "center",
+                  backgroundColor: withAlpha(accentColor, 0.12),
+                }}
+              >
+                <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Request from gym</Text>
+              </Pressable>
+            ) : null}
           </View>
         );
       })}

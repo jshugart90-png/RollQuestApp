@@ -12,16 +12,30 @@ import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
 import { useAssignmentsStore } from "../store/assignments";
 import { useGymStore, withAlpha } from "../store/gym";
 import { loadProgress, type UserProgress } from "../store/progress";
+import { pendingRequestsForGym, useTechniqueRequestStore } from "../store/techniqueRequests";
 import { explainLogoUrlIssue, isLikelyDirectImageUrl } from "../utils/gym-logo";
 import { pickGymLogoFromLibrary } from "../utils/pick-gym-logo";
 
-type TileId = "overview" | "announcements" | "assignments" | "completion" | "roster" | "videos" | "schedule" | "customMoves" | "logo" | "qr" | "curriculum";
+type TileId =
+  | "overview"
+  | "announcements"
+  | "assignments"
+  | "completion"
+  | "roster"
+  | "requests"
+  | "videos"
+  | "schedule"
+  | "customMoves"
+  | "logo"
+  | "qr"
+  | "curriculum";
 const DEFAULT_TILE_ORDER: TileId[] = [
   "overview",
   "announcements",
   "assignments",
   "completion",
   "roster",
+  "requests",
   "videos",
   "schedule",
   "customMoves",
@@ -55,6 +69,7 @@ export default function MyGymScreen() {
   const buildGymShareCode = useGymStore((s) => s.buildGymShareCode);
   const myGymTileOrder = useGymStore((s) => s.myGymTileOrder);
   const setMyGymTileOrder = useGymStore((s) => s.setMyGymTileOrder);
+  const gymId = useGymStore((s) => s.gymId);
 
   const assignments = useAssignmentsStore((s) => s.assignments);
   const roster = useAssignmentsStore((s) => s.roster);
@@ -63,6 +78,16 @@ export default function MyGymScreen() {
   const reorderAssignments = useAssignmentsStore((s) => s.reorderAssignments);
   const removeAssignment = useAssignmentsStore((s) => s.removeAssignment);
   const resolvedTechniques = useResolvedTechniques();
+  const techniqueRequests = useTechniqueRequestStore((s) => s.requests);
+  const dismissTechniqueRequest = useTechniqueRequestStore((s) => s.dismissRequest);
+  const markTechniqueRequestAddressed = useTechniqueRequestStore((s) => s.markAddressed);
+  const removeTechniqueRequest = useTechniqueRequestStore((s) => s.removeRequest);
+
+  const boardAssignments = useMemo(
+    () => assignments.filter((a) => !a.gymId || a.gymId === gymId),
+    [assignments, gymId]
+  );
+  const pendingTechniqueRequests = useMemo(() => pendingRequestsForGym(gymId, techniqueRequests), [gymId, techniqueRequests]);
 
   const [logoInput, setLogoInput] = useState(logoUrl ?? "");
   const [pickingLogo, setPickingLogo] = useState(false);
@@ -124,12 +149,14 @@ export default function MyGymScreen() {
   const rosterStats = useMemo(
     () =>
       roster.map((student) => {
-        const completed = assignments.filter((item) => (item.completedBy ?? []).includes(student.name)).length;
-        const completionPercent = assignments.length > 0 ? Math.round((completed / assignments.length) * 100) : 0;
+        const completed = boardAssignments.filter((item) => (item.completedBy ?? []).includes(student.name)).length;
+        const totalAsg = boardAssignments.length;
+        const completionPercent = totalAsg > 0 ? Math.round((completed / totalAsg) * 100) : 0;
         const masteredEstimate = estimateStudentMasteredCount(student.name, progress?.learnedTechniqueIds.length ?? 0);
-        return { student, completed, completionPercent, masteredEstimate };
+        const report = simulatedStudentProgressReport(student.name, student.belt, completionPercent, masteredEstimate);
+        return { student, completed, completionPercent, masteredEstimate, report, totalAsg };
       }),
-    [assignments, progress?.learnedTechniqueIds.length, roster]
+    [boardAssignments, progress?.learnedTechniqueIds.length, roster]
   );
 
   const videoTechniqueChoices = resolvedTechniques.filter((technique) => {
@@ -328,10 +355,11 @@ export default function MyGymScreen() {
           <Text style={{ color: "#C6D0E0" }}>
             Publish announcements, assign focused drills, and monitor student completion in one premium dashboard.
           </Text>
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <MiniStat label="Assignments" value={String(assignments.length)} />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            <MiniStat label="Assignments" value={String(boardAssignments.length)} />
             <MiniStat label="Roster" value={String(roster.length)} />
             <MiniStat label="Announcements" value={String(announcements.length)} />
+            <MiniStat label="Tech requests" value={String(pendingTechniqueRequests.length)} />
           </View>
           <Text style={{ color: "#8E96A5" }}>
             {progress
@@ -496,24 +524,86 @@ export default function MyGymScreen() {
     if (id === "roster") {
       return (
         <View style={card}>
-          <Text style={title}>Student roster pulse</Text>
-          <Text style={{ color: "#8E96A5" }}>Prototype roster with completion visibility for quick coach check-ins.</Text>
+          <Text style={title}>Student progress reports</Text>
+          <Text style={{ color: "#8E96A5" }}>
+            Simulated roster metrics for every student: belt track, assignments, recall streak, and estimated techniques
+            mastered (demo data until live sync ships).
+          </Text>
           {rosterStats.map((item) => (
             <View key={item.student.name} style={chipCard}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>
-                  {item.student.name} • {item.student.belt}
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>
+                  {item.student.name}{" "}
+                  <Text style={{ color: "#D4B06A", textTransform: "capitalize" }}>({item.student.belt})</Text>
                 </Text>
-                <Text style={{ color: "#D4B06A", fontWeight: "800" }}>{item.completionPercent}%</Text>
+                <Text style={{ color: "#7CFFB1", fontWeight: "800" }}>{item.report.streak}d streak</Text>
               </View>
-              <Text style={{ color: "#9AA2B1", marginTop: 4 }}>
-                {item.completed}/{assignments.length || 0} assignments complete
+              <Text style={{ color: "#9AA2B1", marginTop: 6, fontSize: 12 }}>Belt curriculum momentum</Text>
+              <View style={{ height: 8, borderRadius: 999, backgroundColor: "#1A1A1A", marginTop: 4, overflow: "hidden" }}>
+                <View
+                  style={{
+                    width: `${item.report.beltMomentumPct}%`,
+                    height: "100%",
+                    borderRadius: 999,
+                    backgroundColor: withAlpha(accentColor, 0.95),
+                  }}
+                />
+              </View>
+              <Text style={{ color: "#8E96A5", fontSize: 11, marginTop: 4 }}>
+                {item.report.beltMomentumPct}% toward next curriculum milestone
               </Text>
-              <Text style={{ color: "#9AA2B1", marginTop: 2 }}>
-                Simulated mastery progress: {item.masteredEstimate} techniques mastered
-              </Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
+                <Text style={{ color: "#9AA2B1" }}>
+                  Assignments: {item.completed}/{item.totalAsg || 0} ({item.completionPercent}%)
+                </Text>
+                <Text style={{ color: "#D4B06A", fontWeight: "800" }}>{item.masteredEstimate} tech mastered</Text>
+              </View>
             </View>
           ))}
+        </View>
+      );
+    }
+    if (id === "requests") {
+      return (
+        <View style={card}>
+          <Text style={title}>Technique requests</Text>
+          <Text style={{ color: "#8E96A5" }}>
+            Students linked to your gym can request curriculum focus from Library or Profile. Clear items as you cover
+            them in class.
+          </Text>
+          {pendingTechniqueRequests.length === 0 ? (
+            <EmptyCard text="No open requests. Students will appear here after they submit from their app." />
+          ) : (
+            pendingTechniqueRequests.map((req) => (
+              <View key={req.id} style={chipCard}>
+                <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{req.techniqueName}</Text>
+                <Text style={{ color: "#AAB2C2", marginTop: 2 }}>From {req.studentName}</Text>
+                {req.note ? (
+                  <Text style={{ color: "#8E96A5", marginTop: 4, fontStyle: "italic" }}>{`"${req.note}"`}</Text>
+                ) : null}
+                <Text style={{ color: "#6F7785", fontSize: 12, marginTop: 4 }}>
+                  {new Date(req.createdAt).toLocaleString()}
+                </Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                  <Pressable
+                    onPress={() => markTechniqueRequestAddressed(req.id)}
+                    style={[tinyAction, { borderColor: withAlpha(accentColor, 0.65), backgroundColor: withAlpha(accentColor, 0.14) }]}
+                  >
+                    <Text style={{ color: "#DDE6FF", fontWeight: "700" }}>Mark covered</Text>
+                  </Pressable>
+                  <Pressable onPress={() => dismissTechniqueRequest(req.id)} style={tinyAction}>
+                    <Text style={{ color: "#DDE6FF", fontWeight: "700" }}>Dismiss</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => removeTechniqueRequest(req.id)}
+                    style={[tinyAction, { borderColor: "#5A1F1F", backgroundColor: "#2A1111" }]}
+                  >
+                    <Text style={{ color: "#FFD6D6", fontWeight: "700" }}>Delete</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))
+          )}
         </View>
       );
     }
@@ -696,7 +786,17 @@ export default function MyGymScreen() {
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <View style={{ flex: 1, borderWidth: 1, borderColor: "#2D2D2D", borderRadius: 10, padding: 10, backgroundColor: "#0D0D0D" }}>
+    <View
+      style={{
+        minWidth: "47%",
+        flexGrow: 1,
+        borderWidth: 1,
+        borderColor: "#2D2D2D",
+        borderRadius: 10,
+        padding: 10,
+        backgroundColor: "#0D0D0D",
+      }}
+    >
       <Text style={{ color: "#8E96A5", fontSize: 12 }}>{label}</Text>
       <Text style={{ color: "#FFFFFF", fontWeight: "900", marginTop: 4 }}>{value}</Text>
     </View>
@@ -715,6 +815,23 @@ function estimateStudentMasteredCount(name: string, baseline: number): number {
   const hash = [...name].reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const offset = (hash % 12) - 4;
   return Math.max(0, baseline + offset);
+}
+
+const BELT_RANK: Record<string, number> = { white: 0, blue: 1, purple: 2, brown: 3, black: 4 };
+
+function simulatedStudentProgressReport(
+  name: string,
+  belt: string,
+  assignmentCompletionPct: number,
+  masteredEstimate: number
+): { beltMomentumPct: number; streak: number } {
+  const hash = [...name].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const rank = BELT_RANK[belt] ?? 0;
+  const base = 38 + assignmentCompletionPct * 0.35 + Math.min(24, masteredEstimate);
+  const beltBoost = rank * 7;
+  const beltMomentumPct = Math.min(100, Math.round(base + beltBoost + (hash % 9)));
+  const streak = 2 + (hash % 34);
+  return { beltMomentumPct, streak };
 }
 
 const card = {

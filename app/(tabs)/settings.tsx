@@ -4,6 +4,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { Alert, Modal, Pressable, ScrollView, Switch, Text, TextInput, TouchableWithoutFeedback, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGymStore, withAlpha } from "../store/gym";
+import { setActiveProgressGymId } from "../store/progress";
 
 const PRESET_COLORS = [
   "#C8102E",
@@ -37,11 +38,15 @@ export default function SettingsScreen() {
   const [isHandlingScan, setIsHandlingScan] = useState(false);
 
   const modeLabel = useMemo(() => (isGymMode ? "Gym owner mode" : "Personal mode"), [isGymMode]);
-  function onJoinGym() {
+  async function onJoinGym() {
     const result = joinGymFromShareCode(syncInput);
     if (!result.ok) {
       Alert.alert("Could not join gym", result.message);
       return;
+    }
+    const joined = useGymStore.getState().linkedGym;
+    if (joined?.gymId) {
+      await setActiveProgressGymId(joined.gymId);
     }
     setSyncInput("");
     Alert.alert("Gym synced", "You are now linked to this gym's schedule and curriculum.");
@@ -66,6 +71,10 @@ export default function SettingsScreen() {
       Alert.alert("Could not join gym", result.message);
       setIsHandlingScan(false);
       return;
+    }
+    const joined = useGymStore.getState().linkedGym;
+    if (joined?.gymId) {
+      void setActiveProgressGymId(joined.gymId);
     }
     setSyncInput("");
     setScanOpen(false);
@@ -271,7 +280,7 @@ export default function SettingsScreen() {
               }}
             />
             <Pressable
-              onPress={onJoinGym}
+              onPress={() => void onJoinGym()}
               style={{
                 borderRadius: 10,
                 paddingVertical: 10,
@@ -297,7 +306,10 @@ export default function SettingsScreen() {
                 <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>Connected gym: {linkedGym.gymName}</Text>
                 <Text style={{ color: "#8E96A5", fontSize: 12 }}>Gym ID: {linkedGym.gymId}</Text>
                 <Pressable
-                  onPress={leaveLinkedGym}
+                  onPress={() => {
+                    leaveLinkedGym();
+                    void setActiveProgressGymId(null);
+                  }}
                   style={{
                     alignSelf: "flex-start",
                     marginTop: 4,

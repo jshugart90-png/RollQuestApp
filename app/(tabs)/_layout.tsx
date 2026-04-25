@@ -1,7 +1,8 @@
 import { FontAwesome6, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Tabs, useRouter } from "expo-router";
 import React, { useEffect } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlobalQuickFab } from "../components/GlobalQuickFab";
 import { GymLogoImage } from "../components/GymLogoImage";
 import { useGymStore } from "../store/gym";
@@ -9,6 +10,7 @@ import { useAnnouncementCenter } from "../utils/announcement-center";
 
 export default function TabLayout() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const accentColor = useGymStore((state) => state.accentColor);
   const gymName = useGymStore((state) => state.gymName);
   const logoUrl = useGymStore((state) => state.logoUrl);
@@ -132,18 +134,64 @@ export default function TabLayout() {
       </Tabs>
       <GlobalQuickFab />
       <Modal visible={showAnnouncementModal} transparent animationType="fade" onRequestClose={() => setShowAnnouncementModal(false)}>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.72)", justifyContent: "center", padding: 18 }}>
-          <View style={{ borderWidth: 1, borderColor: "#2A2A2A", borderRadius: 16, backgroundColor: "#0C0C0C", padding: 16 }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 21, fontWeight: "900" }}>New Gym Announcement</Text>
-            {unreadAnnouncements[0] ? (
-              <>
-                <Text style={{ color: "#D4B06A", marginTop: 8, fontWeight: "800" }}>{unreadAnnouncements[0].title}</Text>
-                <Text style={{ color: "#D0D7E4", marginTop: 8, lineHeight: 22 }}>{unreadAnnouncements[0].message}</Text>
-              </>
-            ) : (
-              <Text style={{ color: "#AAB2C2", marginTop: 8 }}>You are all caught up.</Text>
-            )}
-            <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
+        <Pressable
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.78)",
+            justifyContent: "center",
+            paddingHorizontal: 18,
+            paddingTop: insets.top + 12,
+            paddingBottom: insets.bottom + 12,
+          }}
+          onPress={() => setShowAnnouncementModal(false)}
+        >
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: "#2A2A2A",
+              borderRadius: 18,
+              backgroundColor: "#0A0A0A",
+              overflow: "hidden",
+              maxHeight: "88%",
+            }}
+          >
+            <View style={{ height: 4, backgroundColor: accentColor, width: "100%" }} />
+            <ScrollView
+              style={{ maxHeight: 420 }}
+              contentContainerStyle={{ padding: 18, gap: 10 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    backgroundColor: "rgba(200,16,46,0.18)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="megaphone" size={22} color="#F4E6C4" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: "#8E96A5", fontSize: 12, fontWeight: "800", letterSpacing: 0.6 }}>GYM FEED</Text>
+                  <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900" }}>New announcement</Text>
+                </View>
+              </View>
+              {unreadAnnouncements[0] ? (
+                <>
+                  <Text style={{ color: "#D4B06A", fontSize: 18, fontWeight: "900" }}>{unreadAnnouncements[0].title}</Text>
+                  <Text style={{ color: "#D0D7E4", lineHeight: 24, fontSize: 15 }}>{unreadAnnouncements[0].message}</Text>
+                  {unreadAnnouncements[0].expiresOn ? (
+                    <Text style={{ color: "#6F7785", fontSize: 12 }}>Expires {unreadAnnouncements[0].expiresOn}</Text>
+                  ) : null}
+                </>
+              ) : (
+                <Text style={{ color: "#AAB2C2", lineHeight: 22 }}>You are all caught up.</Text>
+              )}
+            </ScrollView>
+            <View style={{ flexDirection: "row", gap: 10, padding: 16, paddingTop: 0, borderTopWidth: 1, borderTopColor: "#1A1A1A" }}>
               <Pressable
                 onPress={() => {
                   void markRead(unreadAnnouncements.map((item) => item.id));
@@ -152,14 +200,14 @@ export default function TabLayout() {
                 style={{
                   flex: 1,
                   borderWidth: 1,
-                  borderColor: "#C8102E",
-                  borderRadius: 10,
-                  paddingVertical: 10,
+                  borderColor: accentColor,
+                  borderRadius: 12,
+                  paddingVertical: 14,
                   alignItems: "center",
-                  backgroundColor: "rgba(200,16,46,0.2)",
+                  backgroundColor: "rgba(200,16,46,0.16)",
                 }}
               >
-                <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Mark Read</Text>
+                <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Mark read</Text>
               </Pressable>
               <Pressable
                 onPress={() => {
@@ -169,18 +217,18 @@ export default function TabLayout() {
                 style={{
                   flex: 1,
                   borderWidth: 1,
-                  borderColor: "#2A2A2A",
-                  borderRadius: 10,
-                  paddingVertical: 10,
+                  borderColor: "#333",
+                  borderRadius: 12,
+                  paddingVertical: 14,
                   alignItems: "center",
-                  backgroundColor: "#131313",
+                  backgroundColor: "#141414",
                 }}
               >
-                <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>Open Feed</Text>
+                <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>Open feed</Text>
               </Pressable>
             </View>
           </View>
-        </View>
+        </Pressable>
       </Modal>
     </View>
   );

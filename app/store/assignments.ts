@@ -1,9 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { useGymStore } from "./gym";
 
 export type Assignment = {
   id: string;
+  /** Owning gym id for future multi-gym assignment boards. */
+  gymId?: string;
   title: string;
   description: string;
   dueDate?: string;
@@ -33,6 +36,8 @@ const DEFAULT_ROSTER: RosterStudent[] = [
 ];
 
 type AssignmentsState = {
+  /** Board scope; mirrors owning gym for multi-gym readiness. */
+  rosterGymId: string;
   roster: RosterStudent[];
   assignments: Assignment[];
   announcements: GymAnnouncement[];
@@ -45,6 +50,7 @@ type AssignmentsState = {
   addAnnouncement: (message: string) => GymAnnouncement | null;
   removeAnnouncement: (id: string) => void;
   resetAssignments: () => void;
+  setRosterGymId: (gymId: string) => void;
 };
 
 function createId(): string {
@@ -54,9 +60,14 @@ function createId(): string {
 export const useAssignmentsStore = create<AssignmentsState>()(
   persist(
     (set) => ({
+      rosterGymId: useGymStore.getState().gymId,
       roster: DEFAULT_ROSTER,
       assignments: [],
       announcements: [],
+      setRosterGymId: (gymId) =>
+        set({
+          rosterGymId: gymId.trim().length > 0 ? gymId.trim() : useGymStore.getState().gymId,
+        }),
       setRoster: (roster) =>
         set({
           roster: roster
@@ -67,8 +78,10 @@ export const useAssignmentsStore = create<AssignmentsState>()(
             .filter((item) => item.name.length > 0),
         }),
       createAssignment: (payload) => {
+        const gymId = useGymStore.getState().gymId;
         const item: Assignment = {
           id: createId(),
+          gymId,
           title: payload.title.trim(),
           description: payload.description.trim(),
           dueDate: payload.dueDate?.trim() || undefined,
@@ -76,7 +89,7 @@ export const useAssignmentsStore = create<AssignmentsState>()(
           targetStudents: payload.targetStudents?.length ? [...new Set(payload.targetStudents)] : undefined,
           completedBy: [],
         };
-        set((state) => ({ assignments: [item, ...state.assignments] }));
+        set((state) => ({ assignments: [item, ...state.assignments], rosterGymId: gymId }));
         return item;
       },
       updateAssignment: (id, patch) =>
@@ -132,12 +145,19 @@ export const useAssignmentsStore = create<AssignmentsState>()(
         set((state) => ({
           announcements: state.announcements.filter((item) => item.id !== id),
         })),
-      resetAssignments: () => set({ roster: DEFAULT_ROSTER, assignments: [], announcements: [] }),
+      resetAssignments: () =>
+        set({
+          rosterGymId: useGymStore.getState().gymId,
+          roster: DEFAULT_ROSTER,
+          assignments: [],
+          announcements: [],
+        }),
     }),
     {
       name: "rollquest.assignments.v1",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
+        rosterGymId: state.rosterGymId,
         roster: state.roster,
         assignments: state.assignments,
         announcements: state.announcements,
@@ -147,6 +167,10 @@ export const useAssignmentsStore = create<AssignmentsState>()(
         const p = persisted as Partial<AssignmentsState>;
         return {
           ...current,
+          rosterGymId:
+            typeof p.rosterGymId === "string" && p.rosterGymId.trim()
+              ? p.rosterGymId.trim()
+              : useGymStore.getState().gymId,
           roster: Array.isArray(p.roster)
             ? p.roster
                 .map((item) => {
@@ -173,6 +197,7 @@ export const useAssignmentsStore = create<AssignmentsState>()(
                 .filter((item): item is Assignment => Boolean(item && typeof item.id === "string" && typeof item.title === "string"))
                 .map((item) => ({
                   ...item,
+                  gymId: typeof item.gymId === "string" && item.gymId.trim() ? item.gymId : undefined,
                   completedBy: Array.isArray(item.completedBy)
                     ? item.completedBy.filter((name): name is string => typeof name === "string")
                     : [],

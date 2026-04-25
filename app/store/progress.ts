@@ -9,6 +9,8 @@ export type TechniqueMasteryLevel = "novice" | "proficient" | "master";
 export type UserProgress = {
   profileName: string;
   currentBelt: BeltLevel;
+  /** When linked to a gym, scopes progress for future multi-gym sync (null = personal / not linked). */
+  activeGymId: string | null;
   /** @deprecated Use streakCount instead. */
   streakDays: number;
   streakCount: number;
@@ -35,6 +37,7 @@ export type UserProgress = {
 export const defaultProgress: UserProgress = {
   profileName: "Student",
   currentBelt: "white",
+  activeGymId: null,
   streakDays: 3,
   streakCount: 3,
   lastActivityDate: null,
@@ -100,6 +103,10 @@ export async function loadProgress(): Promise<UserProgress> {
     return {
       ...defaultProgress,
       ...parsed,
+      activeGymId:
+        typeof parsed.activeGymId === "string" && parsed.activeGymId.trim().length > 0
+          ? parsed.activeGymId.trim()
+          : null,
       profileName: typeof parsed.profileName === "string" && parsed.profileName.trim().length > 0 ? parsed.profileName : "Student",
       currentBelt: curriculumBelt,
       streakCount: normalizedStreak,
@@ -180,6 +187,14 @@ export async function updateProfileName(profileName: string): Promise<UserProgre
   const progress = await loadProgress();
   const trimmed = profileName.trim();
   const updated = { ...progress, profileName: trimmed.length > 0 ? trimmed : "Student" };
+  await saveProgress(updated);
+  return updated;
+}
+
+export async function setActiveProgressGymId(gymId: string | null): Promise<UserProgress> {
+  const progress = await loadProgress();
+  const nextId = gymId && gymId.trim().length > 0 ? gymId.trim() : null;
+  const updated = { ...progress, activeGymId: nextId };
   await saveProgress(updated);
   return updated;
 }
