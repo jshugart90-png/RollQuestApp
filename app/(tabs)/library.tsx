@@ -66,6 +66,14 @@ export default function LibraryScreen() {
       ].some((field) => field.toLowerCase().includes(q))
     );
   }, [filtered, search]);
+  const masterySummary = useMemo(() => {
+    const entries = Object.values(progress.masteryByTechniqueId);
+    return {
+      novice: entries.filter((item) => item === "novice").length,
+      proficient: entries.filter((item) => item === "proficient").length,
+      master: entries.filter((item) => item === "master").length,
+    };
+  }, [progress.masteryByTechniqueId]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["top"]}>
@@ -197,6 +205,22 @@ export default function LibraryScreen() {
               ? "Learned Techniques"
               : "All Techniques"}
           .
+        </Text>
+      </View>
+      <View
+        style={{
+          borderWidth: 1,
+          borderColor: "#2A2A2A",
+          backgroundColor: "#101010",
+          borderRadius: 12,
+          padding: 12,
+          flexDirection: "row",
+          justifyContent: "space-between",
+        }}
+      >
+        <Text style={{ color: "#9AA2B1", fontWeight: "700" }}>Mastery Map</Text>
+        <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>
+          N {masterySummary.novice} • P {masterySummary.proficient} • M {masterySummary.master}
         </Text>
       </View>
 

@@ -465,6 +465,11 @@ export default function ProfileScreen() {
             <ShortcutButton label="My Library" onPress={() => router.push("/library" as Href)} accentColor={accentColor} />
             <ShortcutButton label="My Gym" onPress={() => router.push("/my-gym" as Href)} accentColor={accentColor} />
           </View>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <ShortcutButton label="Notifications" onPress={() => router.push("/notifications" as Href)} accentColor={accentColor} />
+            <View style={{ flex: 1 }} />
+            <View style={{ flex: 1 }} />
+          </View>
         </View>
 
         <View style={glassCard}>

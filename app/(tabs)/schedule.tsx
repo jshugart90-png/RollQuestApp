@@ -172,6 +172,45 @@ export default function ScheduleScreen() {
           )}
         </View>
 
+        <View style={{ borderWidth: 1, borderColor: "#232323", borderRadius: 12, backgroundColor: "#0E0E0E", padding: 12 }}>
+          <Text style={{ color: "#FFFFFF", fontWeight: "900", marginBottom: 8 }}>Weekly Snapshot</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {WEEK_DAYS.map((day) => {
+              const dayCount = byDay[day].length;
+              const dayDate = dateByDay.get(day);
+              const dateKey = dayDate ? toDateKey(dayDate) : "";
+              const attendedCount = byDay[day].filter((cls) =>
+                progress?.attendedClassKeys.includes(`${cls.id}|${dateKey}`)
+              ).length;
+              return (
+                <View
+                  key={`snap-${day}`}
+                  style={{
+                    width: 110,
+                    borderWidth: 1,
+                    borderColor: "#2A2A2A",
+                    borderRadius: 10,
+                    backgroundColor: "#111",
+                    padding: 10,
+                  }}
+                >
+                  <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>{day.slice(0, 3)}</Text>
+                  <Text style={{ color: "#D4B06A", marginTop: 4 }}>{dayCount} class{dayCount === 1 ? "" : "es"}</Text>
+                  {!isGymMode ? (
+                    <Text style={{ color: "#8E96A5", marginTop: 3, fontSize: 12 }}>
+                      {attendedCount} attended
+                    </Text>
+                  ) : (
+                    <Text style={{ color: "#8E96A5", marginTop: 3, fontSize: 12 }}>
+                      {dayDate ? formatShortWeekdayDate(dayDate) : ""}
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+
         {WEEK_DAYS.map((day) => {
           const classes = byDay[day];
           const dateLine = dateTextByDay.get(day) ?? "";

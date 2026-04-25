@@ -39,6 +39,14 @@ export type GymScheduleClass = {
   displayOrder?: number;
 };
 
+export type GymAnnouncement = {
+  id: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  expiresOn?: string;
+};
+
 export type GymSyncPayload = {
   version: 1;
   gymId: string;
@@ -46,6 +54,7 @@ export type GymSyncPayload = {
   accentColor: string;
   logoUrl?: string;
   schedule: GymScheduleClass[];
+  announcements: GymAnnouncement[];
   techniqueOverrides: GymTechniqueOverrides;
   videoOverrides: Record<string, string>;
   customTechniques: Technique[];
@@ -126,6 +135,7 @@ type GymState = {
   logoUrl?: string;
   isGymMode: boolean;
   schedule: GymScheduleClass[];
+  announcements: GymAnnouncement[];
   techniqueOverrides: GymTechniqueOverrides;
   videoOverrides: Record<string, string>;
   customTechniques: Technique[];
@@ -137,6 +147,8 @@ type GymState = {
   setLogoUrl: (logoUrl?: string) => void;
   setIsGymMode: (isGymMode: boolean) => void;
   upsertScheduleClass: (item: GymScheduleClass) => void;
+  createAnnouncement: (payload: { title: string; message: string; expiresOn?: string }) => GymAnnouncement | null;
+  removeAnnouncement: (id: string) => void;
   removeScheduleClass: (id: string) => void;
   reorderScheduleForDay: (day: GymDay, orderedIds: string[]) => void;
   duplicateScheduleClassToDays: (id: string, targetDays: GymDay[]) => void;
@@ -174,8 +186,6 @@ function parseShareCode(raw: string): GymSyncPayload | null {
       !Array.isArray(parsed.schedule) ||
       !parsed.techniqueOverrides ||
       typeof parsed.techniqueOverrides !== "object" ||
-      !parsed.videoOverrides ||
-      typeof parsed.videoOverrides !== "object" ||
       !Array.isArray(parsed.customTechniques) ||
       typeof parsed.updatedAt !== "string"
     ) {
@@ -188,9 +198,18 @@ function parseShareCode(raw: string): GymSyncPayload | null {
       accentColor: normalizeHexColor(parsed.accentColor),
       logoUrl: typeof parsed.logoUrl === "string" && parsed.logoUrl.trim() ? parsed.logoUrl.trim() : undefined,
       schedule: parsed.schedule as GymScheduleClass[],
+      announcements: (Array.isArray(parsed.announcements) ? (parsed.announcements as GymAnnouncement[]) : [])
+        .filter((item) => item && typeof item.id === "string" && typeof item.title === "string" && typeof item.message === "string")
+        .map((item) => ({
+          id: item.id,
+          title: item.title,
+          message: item.message,
+          createdAt: item.createdAt,
+          expiresOn: item.expiresOn,
+        })),
       techniqueOverrides: parsed.techniqueOverrides,
       videoOverrides: Object.fromEntries(
-        Object.entries(parsed.videoOverrides).filter(
+        Object.entries(parsed.videoOverrides ?? {}).filter(
           (entry): entry is [string, string] => typeof entry[0] === "string" && typeof entry[1] === "string"
         )
       ),
@@ -222,6 +241,7 @@ export const useGymStore = create<GymState>()(
       logoUrl: undefined,
       isGymMode: false,
       schedule: DEFAULT_SCHEDULE,
+      announcements: [],
       techniqueOverrides: emptyOverrides,
       videoOverrides: {},
       customTechniques: [],
@@ -256,6 +276,24 @@ export const useGymStore = create<GymState>()(
           logoUrl: logoUrl && logoUrl.trim().length > 0 ? logoUrl.trim() : undefined,
         }),
       setIsGymMode: (isGymMode) => set({ isGymMode }),
+      createAnnouncement: (payload) => {
+        const title = payload.title.trim();
+        const message = payload.message.trim();
+        if (!title || !message) return null;
+        const item: GymAnnouncement = {
+          id: `ann-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          title,
+          message,
+          createdAt: new Date().toISOString(),
+          expiresOn: payload.expiresOn?.trim() || undefined,
+        };
+        set((state) => ({ announcements: [item, ...state.announcements] }));
+        return item;
+      },
+      removeAnnouncement: (id) =>
+        set((state) => ({
+          announcements: state.announcements.filter((item) => item.id !== id),
+        })),
       upsertScheduleClass: (item) =>
         set((state) => {
           const exists = state.schedule.some((cls) => cls.id === item.id);
@@ -367,6 +405,7 @@ export const useGymStore = create<GymState>()(
           accentColor: state.accentColor,
           logoUrl: state.logoUrl,
           schedule: state.schedule,
+          announcements: state.announcements,
           techniqueOverrides: state.techniqueOverrides,
           videoOverrides: state.videoOverrides,
           customTechniques: state.customTechniques,
@@ -394,6 +433,7 @@ export const useGymStore = create<GymState>()(
           logoUrl: undefined,
           isGymMode: false,
           schedule: DEFAULT_SCHEDULE,
+          announcements: [],
           techniqueOverrides: {},
           videoOverrides: {},
           customTechniques: [],
@@ -423,6 +463,7 @@ export const useGymStore = create<GymState>()(
         logoUrl: state.logoUrl,
         isGymMode: state.isGymMode,
         schedule: state.schedule,
+        announcements: state.announcements,
         techniqueOverrides: state.techniqueOverrides,
         videoOverrides: state.videoOverrides,
         customTechniques: state.customTechniques,
@@ -440,6 +481,26 @@ export const useGymStore = create<GymState>()(
           logoUrl: typeof p.logoUrl === "string" && p.logoUrl.trim() ? p.logoUrl.trim() : undefined,
           isGymMode: typeof p.isGymMode === "boolean" ? p.isGymMode : current.isGymMode,
           schedule: Array.isArray(p.schedule) ? p.schedule : current.schedule,
+          announcements: Array.isArray(p.announcements)
+            ? p.announcements
+                .filter(
+                  (item): item is GymAnnouncement =>
+                    Boolean(
+                      item &&
+                        typeof item.id === "string" &&
+                        typeof item.title === "string" &&
+                        typeof item.message === "string" &&
+                        typeof item.createdAt === "string"
+                    )
+                )
+                .map((item) => ({
+                  id: item.id,
+                  title: item.title,
+                  message: item.message,
+                  createdAt: item.createdAt,
+                  expiresOn: typeof item.expiresOn === "string" ? item.expiresOn : undefined,
+                }))
+            : [],
           techniqueOverrides:
             p.techniqueOverrides && typeof p.techniqueOverrides === "object" ? p.techniqueOverrides : {},
           videoOverrides:

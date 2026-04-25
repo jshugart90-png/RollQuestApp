@@ -44,6 +44,9 @@ export default function MyGymScreen() {
   const removeScheduleClass = useGymStore((s) => s.removeScheduleClass);
   const reorderScheduleForDay = useGymStore((s) => s.reorderScheduleForDay);
   const duplicateScheduleClassToDays = useGymStore((s) => s.duplicateScheduleClassToDays);
+  const announcements = useGymStore((s) => s.announcements);
+  const createAnnouncement = useGymStore((s) => s.createAnnouncement);
+  const removeAnnouncement = useGymStore((s) => s.removeAnnouncement);
   const upsertCustomTechnique = useGymStore((s) => s.upsertCustomTechnique);
   const removeCustomTechnique = useGymStore((s) => s.removeCustomTechnique);
   const setVideoOverride = useGymStore((s) => s.setVideoOverride);
@@ -55,13 +58,10 @@ export default function MyGymScreen() {
 
   const assignments = useAssignmentsStore((s) => s.assignments);
   const roster = useAssignmentsStore((s) => s.roster);
-  const announcements = useAssignmentsStore((s) => s.announcements);
   const createAssignment = useAssignmentsStore((s) => s.createAssignment);
   const updateAssignment = useAssignmentsStore((s) => s.updateAssignment);
   const reorderAssignments = useAssignmentsStore((s) => s.reorderAssignments);
   const removeAssignment = useAssignmentsStore((s) => s.removeAssignment);
-  const addAnnouncement = useAssignmentsStore((s) => s.addAnnouncement);
-  const removeAnnouncement = useAssignmentsStore((s) => s.removeAnnouncement);
   const resolvedTechniques = useResolvedTechniques();
 
   const [logoInput, setLogoInput] = useState(logoUrl ?? "");
@@ -80,7 +80,9 @@ export default function MyGymScreen() {
   const [assignmentTechniqueIds, setAssignmentTechniqueIds] = useState<string[]>([]);
   const [assignmentTargetStudents, setAssignmentTargetStudents] = useState<string[]>([]);
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
-  const [announcementDraft, setAnnouncementDraft] = useState("");
+  const [announcementTitle, setAnnouncementTitle] = useState("");
+  const [announcementMessage, setAnnouncementMessage] = useState("");
+  const [announcementExpiresOn, setAnnouncementExpiresOn] = useState("");
   const [videoSearch, setVideoSearch] = useState("");
   const [videoDrafts, setVideoDrafts] = useState<Record<string, string>>({});
   const [isReorderingTiles, setIsReorderingTiles] = useState(false);
@@ -285,12 +287,23 @@ export default function MyGymScreen() {
   }
 
   function submitAnnouncement() {
-    const created = addAnnouncement(announcementDraft);
-    if (!created) {
-      Alert.alert("Write an announcement", "Add a short announcement before posting.");
+    const expiry = announcementExpiresOn.trim();
+    if (expiry && !/^\d{4}-\d{2}-\d{2}$/.test(expiry)) {
+      Alert.alert("Invalid expiration date", "Use YYYY-MM-DD format.");
       return;
     }
-    setAnnouncementDraft("");
+    const created = createAnnouncement({
+      title: announcementTitle,
+      message: announcementMessage,
+      expiresOn: expiry || undefined,
+    });
+    if (!created) {
+      Alert.alert("Write an announcement", "Add title and message before posting.");
+      return;
+    }
+    setAnnouncementTitle("");
+    setAnnouncementMessage("");
+    setAnnouncementExpiresOn("");
   }
 
   function getTechniqueName(id: string): string {
@@ -334,12 +347,26 @@ export default function MyGymScreen() {
           <Text style={title}>Quick announcements</Text>
           <Text style={{ color: "#8E96A5" }}>Broadcast class updates, focus themes, and reminders instantly.</Text>
           <TextInput
-            value={announcementDraft}
-            onChangeText={setAnnouncementDraft}
-            placeholder="Team note: tonight we focus on guard retention rounds..."
+            value={announcementTitle}
+            onChangeText={setAnnouncementTitle}
+            placeholder="Announcement title"
+            placeholderTextColor="#5D6574"
+            style={inputStyle}
+          />
+          <TextInput
+            value={announcementMessage}
+            onChangeText={setAnnouncementMessage}
+            placeholder="Message for students..."
             placeholderTextColor="#5D6574"
             style={[inputStyle, { minHeight: 70, textAlignVertical: "top" }]}
             multiline
+          />
+          <TextInput
+            value={announcementExpiresOn}
+            onChangeText={setAnnouncementExpiresOn}
+            placeholder="Optional expiration (YYYY-MM-DD)"
+            placeholderTextColor="#5D6574"
+            style={inputStyle}
           />
           <Pressable onPress={submitAnnouncement} style={primaryButton}>
             <Text style={buttonText}>Post announcement</Text>
@@ -349,9 +376,13 @@ export default function MyGymScreen() {
           ) : (
             announcements.slice(0, 4).map((item) => (
               <View key={item.id} style={chipCard}>
+                <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{item.title}</Text>
                 <Text style={{ color: "#E9EDF7", lineHeight: 20 }}>{item.message}</Text>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
-                  <Text style={{ color: "#7B8392", fontSize: 12 }}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+                  <Text style={{ color: "#7B8392", fontSize: 12 }}>
+                    {new Date(item.createdAt).toLocaleDateString()}
+                    {item.expiresOn ? ` • expires ${item.expiresOn}` : ""}
+                  </Text>
                   <Pressable onPress={() => removeAnnouncement(item.id)}>
                     <Text style={{ color: "#F29A9A", fontWeight: "800" }}>Delete</Text>
                   </Pressable>

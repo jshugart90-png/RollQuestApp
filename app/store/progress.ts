@@ -26,6 +26,8 @@ export type UserProgress = {
   masteryByTechniqueId: Record<string, TechniqueMasteryLevel>;
   /** Attendance markers keyed by classId|YYYY-MM-DD. */
   attendedClassKeys: string[];
+  /** Gym announcement ids the student has already viewed. */
+  readAnnouncementIds: string[];
   /** Completed daily task ids bucketed by YYYY-MM-DD. */
   completedDailyTaskIdsByDate: Record<string, string[]>;
 };
@@ -45,6 +47,7 @@ export const defaultProgress: UserProgress = {
   reviewStrengthByTechniqueId: {},
   masteryByTechniqueId: {},
   attendedClassKeys: [],
+  readAnnouncementIds: [],
   completedDailyTaskIdsByDate: {},
 };
 
@@ -142,6 +145,9 @@ export async function loadProgress(): Promise<UserProgress> {
           : {},
       attendedClassKeys: Array.isArray(parsed.attendedClassKeys)
         ? parsed.attendedClassKeys.filter((item): item is string => typeof item === "string")
+        : [],
+      readAnnouncementIds: Array.isArray(parsed.readAnnouncementIds)
+        ? parsed.readAnnouncementIds.filter((item): item is string => typeof item === "string")
         : [],
       completedDailyTaskIdsByDate:
         parsed.completedDailyTaskIdsByDate && typeof parsed.completedDailyTaskIdsByDate === "object"
@@ -349,6 +355,20 @@ export async function toggleClassAttendance(
   const updated = { ...progress, attendedClassKeys: next };
   await saveProgress(updated);
   return already ? updated : registerActivity(date);
+}
+
+export async function markAnnouncementsRead(ids: string[]): Promise<UserProgress> {
+  const progress = await loadProgress();
+  const incoming = ids.filter((id): id is string => typeof id === "string" && id.trim().length > 0);
+  if (incoming.length === 0) return progress;
+  const next = [...new Set([...progress.readAnnouncementIds, ...incoming])];
+  const updated = { ...progress, readAnnouncementIds: next };
+  await saveProgress(updated);
+  return updated;
+}
+
+export async function markAnnouncementRead(id: string): Promise<UserProgress> {
+  return markAnnouncementsRead([id]);
 }
 
 export async function markDailyTaskCompleted(taskId: string, date = startOfTodayDateString()): Promise<UserProgress> {
