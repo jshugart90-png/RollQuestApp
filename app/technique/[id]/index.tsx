@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { Technique } from "../../data/techniques";
-import { hasValidYoutubeWatchUrl } from "../../utils/youtubeVideoUrl";
 import { useResolvedTechniqueById } from "../../hooks/useResolvedTechniques";
 import { useGymStore, withAlpha } from "../../store/gym";
 import { loadNotes, type SessionNote } from "../../store/notes";
@@ -182,7 +181,7 @@ function TechniqueBody({
             ))}
           </View>
 
-          {hasValidYoutubeWatchUrl(technique.youtubeUrl) ? (
+          {isOpenableVideoUrl(technique.youtubeUrl) ? (
             <Pressable
               onPress={() => Linking.openURL(technique.youtubeUrl)}
               style={{
@@ -193,9 +192,9 @@ function TechniqueBody({
                 padding: 14,
               }}
             >
-              <Text style={{ color: "#D4B06A", fontWeight: "900", fontSize: 16 }}>Watch Exact YouTube Breakdown</Text>
+              <Text style={{ color: "#D4B06A", fontWeight: "900", fontSize: 16 }}>Watch Technique Breakdown</Text>
               <Text style={{ color: "#B7BECC", marginTop: 4 }}>
-                Open the full video, study details, then drill with control and intention.
+                Open your gym&apos;s preferred video reference and drill with control and intention.
               </Text>
             </Pressable>
           ) : (
@@ -297,6 +296,11 @@ function TechniqueBody({
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function isOpenableVideoUrl(url: string): boolean {
+  const value = url.trim().toLowerCase();
+  return value.startsWith("https://") || value.startsWith("http://");
 }
 
 const sectionCard = {

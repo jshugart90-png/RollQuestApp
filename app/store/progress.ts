@@ -4,6 +4,7 @@ const PROGRESS_KEY = "rollquest.progress.v1";
 const LEGACY_MY_TECHNIQUES_KEY = "rollquest.myTechniques.v1";
 
 export type BeltLevel = "white" | "blue" | "purple" | "brown" | "black";
+export type TechniqueMasteryLevel = "novice" | "proficient" | "master";
 
 export type UserProgress = {
   profileName: string;
@@ -21,6 +22,10 @@ export type UserProgress = {
   lastReviewedByTechniqueId: Record<string, string>;
   /** Spaced repetition memory strength by technique id (0-5). */
   reviewStrengthByTechniqueId: Record<string, number>;
+  /** Student-declared mastery level by technique id. */
+  masteryByTechniqueId: Record<string, TechniqueMasteryLevel>;
+  /** Attendance markers keyed by classId|YYYY-MM-DD. */
+  attendedClassKeys: string[];
   /** Completed daily task ids bucketed by YYYY-MM-DD. */
   completedDailyTaskIdsByDate: Record<string, string[]>;
 };
@@ -38,6 +43,8 @@ export const defaultProgress: UserProgress = {
   myTechniques: [],
   lastReviewedByTechniqueId: {},
   reviewStrengthByTechniqueId: {},
+  masteryByTechniqueId: {},
+  attendedClassKeys: [],
   completedDailyTaskIdsByDate: {},
 };
 
@@ -123,6 +130,19 @@ export async function loadProgress(): Promise<UserProgress> {
               ])
             )
           : {},
+      masteryByTechniqueId:
+        parsed.masteryByTechniqueId && typeof parsed.masteryByTechniqueId === "object"
+          ? Object.fromEntries(
+              Object.entries(parsed.masteryByTechniqueId).filter(
+                (entry): entry is [string, TechniqueMasteryLevel] =>
+                  typeof entry[0] === "string" &&
+                  (entry[1] === "novice" || entry[1] === "proficient" || entry[1] === "master")
+              )
+            )
+          : {},
+      attendedClassKeys: Array.isArray(parsed.attendedClassKeys)
+        ? parsed.attendedClassKeys.filter((item): item is string => typeof item === "string")
+        : [],
       completedDailyTaskIdsByDate:
         parsed.completedDailyTaskIdsByDate && typeof parsed.completedDailyTaskIdsByDate === "object"
           ? Object.fromEntries(
@@ -293,6 +313,42 @@ export async function rateTechniqueRecall(techniqueId: string, remembered: boole
   };
   await saveProgress(updated);
   return registerActivity(today);
+}
+
+export async function setTechniqueMasteryLevel(
+  techniqueId: string,
+  level: TechniqueMasteryLevel
+): Promise<UserProgress> {
+  const progress = await loadProgress();
+  const today = startOfTodayDateString();
+  const updated = {
+    ...progress,
+    masteryByTechniqueId: {
+      ...progress.masteryByTechniqueId,
+      [techniqueId]: level,
+    },
+    lastReviewedByTechniqueId: {
+      ...progress.lastReviewedByTechniqueId,
+      [techniqueId]: progress.lastReviewedByTechniqueId[techniqueId] ?? today,
+    },
+  };
+  await saveProgress(updated);
+  return registerActivity(today);
+}
+
+export async function toggleClassAttendance(
+  classId: string,
+  date = startOfTodayDateString()
+): Promise<UserProgress> {
+  const progress = await loadProgress();
+  const key = `${classId}|${date}`;
+  const already = progress.attendedClassKeys.includes(key);
+  const next = already
+    ? progress.attendedClassKeys.filter((item) => item !== key)
+    : [...progress.attendedClassKeys, key];
+  const updated = { ...progress, attendedClassKeys: next };
+  await saveProgress(updated);
+  return already ? updated : registerActivity(date);
 }
 
 export async function markDailyTaskCompleted(taskId: string, date = startOfTodayDateString()): Promise<UserProgress> {

@@ -8,6 +8,8 @@ export type Assignment = {
   description: string;
   dueDate?: string;
   linkedTechniqueIds?: string[];
+  /** Empty/undefined means assigned to entire roster. */
+  targetStudents?: string[];
   completedBy?: string[];
 };
 
@@ -17,13 +19,24 @@ export type GymAnnouncement = {
   createdAt: string;
 };
 
-const DEFAULT_ROSTER = ["Student", "Alex", "Jordan", "Sam", "Casey"];
+export type RosterStudent = {
+  name: string;
+  belt: "white" | "blue" | "purple" | "brown" | "black";
+};
+
+const DEFAULT_ROSTER: RosterStudent[] = [
+  { name: "Student", belt: "white" },
+  { name: "Alex", belt: "blue" },
+  { name: "Jordan", belt: "purple" },
+  { name: "Sam", belt: "brown" },
+  { name: "Casey", belt: "white" },
+];
 
 type AssignmentsState = {
-  roster: string[];
+  roster: RosterStudent[];
   assignments: Assignment[];
   announcements: GymAnnouncement[];
-  setRoster: (roster: string[]) => void;
+  setRoster: (roster: RosterStudent[]) => void;
   createAssignment: (payload: Omit<Assignment, "id" | "completedBy">) => Assignment;
   updateAssignment: (id: string, patch: Omit<Assignment, "id" | "completedBy">) => void;
   reorderAssignments: (orderedIds: string[]) => void;
@@ -46,7 +59,12 @@ export const useAssignmentsStore = create<AssignmentsState>()(
       announcements: [],
       setRoster: (roster) =>
         set({
-          roster: roster.map((name) => name.trim()).filter((name) => name.length > 0),
+          roster: roster
+            .map((item) => ({
+              name: item.name.trim(),
+              belt: item.belt,
+            }))
+            .filter((item) => item.name.length > 0),
         }),
       createAssignment: (payload) => {
         const item: Assignment = {
@@ -55,6 +73,7 @@ export const useAssignmentsStore = create<AssignmentsState>()(
           description: payload.description.trim(),
           dueDate: payload.dueDate?.trim() || undefined,
           linkedTechniqueIds: payload.linkedTechniqueIds?.length ? [...new Set(payload.linkedTechniqueIds)] : undefined,
+          targetStudents: payload.targetStudents?.length ? [...new Set(payload.targetStudents)] : undefined,
           completedBy: [],
         };
         set((state) => ({ assignments: [item, ...state.assignments] }));
@@ -71,6 +90,7 @@ export const useAssignmentsStore = create<AssignmentsState>()(
                   description: patch.description.trim(),
                   dueDate: patch.dueDate?.trim() || undefined,
                   linkedTechniqueIds: patch.linkedTechniqueIds?.length ? [...new Set(patch.linkedTechniqueIds)] : [],
+                  targetStudents: patch.targetStudents?.length ? [...new Set(patch.targetStudents)] : undefined,
                 }
           ),
         })),
@@ -127,7 +147,27 @@ export const useAssignmentsStore = create<AssignmentsState>()(
         const p = persisted as Partial<AssignmentsState>;
         return {
           ...current,
-          roster: Array.isArray(p.roster) ? p.roster.filter((name): name is string => typeof name === "string") : DEFAULT_ROSTER,
+          roster: Array.isArray(p.roster)
+            ? p.roster
+                .map((item) => {
+                  if (typeof item === "string") {
+                    return { name: item, belt: "white" as const };
+                  }
+                  if (!item || typeof item !== "object") return null;
+                  const maybe = item as Partial<RosterStudent>;
+                  if (typeof maybe.name !== "string") return null;
+                  const belt =
+                    maybe.belt === "white" ||
+                    maybe.belt === "blue" ||
+                    maybe.belt === "purple" ||
+                    maybe.belt === "brown" ||
+                    maybe.belt === "black"
+                      ? maybe.belt
+                      : "white";
+                  return { name: maybe.name, belt };
+                })
+                .filter((item): item is RosterStudent => Boolean(item))
+            : DEFAULT_ROSTER,
           assignments: Array.isArray(p.assignments)
             ? p.assignments
                 .filter((item): item is Assignment => Boolean(item && typeof item.id === "string" && typeof item.title === "string"))
@@ -138,6 +178,9 @@ export const useAssignmentsStore = create<AssignmentsState>()(
                     : [],
                   linkedTechniqueIds: Array.isArray(item.linkedTechniqueIds)
                     ? item.linkedTechniqueIds.filter((id): id is string => typeof id === "string")
+                    : [],
+                  targetStudents: Array.isArray(item.targetStudents)
+                    ? item.targetStudents.filter((name): name is string => typeof name === "string")
                     : [],
                 }))
             : [],

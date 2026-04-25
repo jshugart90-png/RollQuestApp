@@ -111,16 +111,20 @@ export default function NotesScreen() {
   const assignmentCards = useMemo(
     () =>
       assignments.map((assignment) => {
+        const isAssignedToMe =
+          !assignment.targetStudents || assignment.targetStudents.length === 0
+            ? true
+            : assignment.targetStudents.includes(profileName);
         const done = (assignment.completedBy ?? []).includes(profileName);
         const linkedTechniques = (assignment.linkedTechniqueIds ?? [])
           .map((id) => techniques.find((item) => item.id === id))
           .filter((item): item is Technique => Boolean(item));
-        return { assignment, done, linkedTechniques };
+        return { assignment, done, linkedTechniques, isAssignedToMe };
       }),
     [assignments, profileName, techniques]
   );
-  const pendingAssignments = assignmentCards.filter((item) => !item.done);
-  const completedAssignments = assignmentCards.filter((item) => item.done);
+  const pendingAssignments = assignmentCards.filter((item) => item.isAssignedToMe && !item.done);
+  const completedAssignments = assignmentCards.filter((item) => item.isAssignedToMe && item.done);
 
   function openNew() {
     setEditingId(null);

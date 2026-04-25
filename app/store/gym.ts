@@ -47,6 +47,7 @@ export type GymSyncPayload = {
   logoUrl?: string;
   schedule: GymScheduleClass[];
   techniqueOverrides: GymTechniqueOverrides;
+  videoOverrides: Record<string, string>;
   customTechniques: Technique[];
   updatedAt: string;
 };
@@ -126,6 +127,7 @@ type GymState = {
   isGymMode: boolean;
   schedule: GymScheduleClass[];
   techniqueOverrides: GymTechniqueOverrides;
+  videoOverrides: Record<string, string>;
   customTechniques: Technique[];
   linkedGym?: GymSyncPayload;
   myGymTileOrder: string[];
@@ -139,6 +141,8 @@ type GymState = {
   reorderScheduleForDay: (day: GymDay, orderedIds: string[]) => void;
   duplicateScheduleClassToDays: (id: string, targetDays: GymDay[]) => void;
   setTechniqueOverride: (techniqueId: string, patch: GymTechniqueOverrides[string]) => void;
+  setVideoOverride: (techniqueId: string, url: string) => void;
+  clearVideoOverride: (techniqueId: string) => void;
   clearTechniqueOverride: (techniqueId: string) => void;
   clearAllTechniqueOverrides: () => void;
   upsertCustomTechnique: (item: Technique) => void;
@@ -170,6 +174,8 @@ function parseShareCode(raw: string): GymSyncPayload | null {
       !Array.isArray(parsed.schedule) ||
       !parsed.techniqueOverrides ||
       typeof parsed.techniqueOverrides !== "object" ||
+      !parsed.videoOverrides ||
+      typeof parsed.videoOverrides !== "object" ||
       !Array.isArray(parsed.customTechniques) ||
       typeof parsed.updatedAt !== "string"
     ) {
@@ -183,6 +189,11 @@ function parseShareCode(raw: string): GymSyncPayload | null {
       logoUrl: typeof parsed.logoUrl === "string" && parsed.logoUrl.trim() ? parsed.logoUrl.trim() : undefined,
       schedule: parsed.schedule as GymScheduleClass[],
       techniqueOverrides: parsed.techniqueOverrides,
+      videoOverrides: Object.fromEntries(
+        Object.entries(parsed.videoOverrides).filter(
+          (entry): entry is [string, string] => typeof entry[0] === "string" && typeof entry[1] === "string"
+        )
+      ),
       customTechniques: parsed.customTechniques as Technique[],
       updatedAt: parsed.updatedAt,
     };
@@ -212,9 +223,22 @@ export const useGymStore = create<GymState>()(
       isGymMode: false,
       schedule: DEFAULT_SCHEDULE,
       techniqueOverrides: emptyOverrides,
+      videoOverrides: {},
       customTechniques: [],
       linkedGym: undefined,
-      myGymTileOrder: ["logo", "curriculum", "qr", "customMoves", "schedule", "assignments", "roster", "completion"],
+      myGymTileOrder: [
+        "overview",
+        "announcements",
+        "assignments",
+        "completion",
+        "roster",
+        "videos",
+        "schedule",
+        "customMoves",
+        "logo",
+        "qr",
+        "curriculum",
+      ],
       setGymId: (gymId) =>
         set({
           gymId: gymId.trim().length > 0 ? gymId.trim() : createGymId(),
@@ -291,6 +315,19 @@ export const useGymStore = create<GymState>()(
             [techniqueId]: { ...(state.techniqueOverrides[techniqueId] ?? {}), ...patch },
           },
         })),
+      setVideoOverride: (techniqueId, url) =>
+        set((state) => ({
+          videoOverrides: {
+            ...state.videoOverrides,
+            [techniqueId]: url.trim(),
+          },
+        })),
+      clearVideoOverride: (techniqueId) =>
+        set((state) => {
+          const next = { ...state.videoOverrides };
+          delete next[techniqueId];
+          return { videoOverrides: next };
+        }),
       clearTechniqueOverride: (techniqueId) =>
         set((state) => {
           const next = { ...state.techniqueOverrides };
@@ -331,6 +368,7 @@ export const useGymStore = create<GymState>()(
           logoUrl: state.logoUrl,
           schedule: state.schedule,
           techniqueOverrides: state.techniqueOverrides,
+          videoOverrides: state.videoOverrides,
           customTechniques: state.customTechniques,
           updatedAt: new Date().toISOString(),
         };
@@ -357,9 +395,22 @@ export const useGymStore = create<GymState>()(
           isGymMode: false,
           schedule: DEFAULT_SCHEDULE,
           techniqueOverrides: {},
+          videoOverrides: {},
           customTechniques: [],
           linkedGym: undefined,
-          myGymTileOrder: ["logo", "curriculum", "qr", "customMoves", "schedule", "assignments", "roster", "completion"],
+          myGymTileOrder: [
+            "overview",
+            "announcements",
+            "assignments",
+            "completion",
+            "roster",
+            "videos",
+            "schedule",
+            "customMoves",
+            "logo",
+            "qr",
+            "curriculum",
+          ],
         }),
     }),
     {
@@ -373,6 +424,7 @@ export const useGymStore = create<GymState>()(
         isGymMode: state.isGymMode,
         schedule: state.schedule,
         techniqueOverrides: state.techniqueOverrides,
+        videoOverrides: state.videoOverrides,
         customTechniques: state.customTechniques,
         linkedGym: state.linkedGym,
         myGymTileOrder: state.myGymTileOrder,
@@ -390,6 +442,14 @@ export const useGymStore = create<GymState>()(
           schedule: Array.isArray(p.schedule) ? p.schedule : current.schedule,
           techniqueOverrides:
             p.techniqueOverrides && typeof p.techniqueOverrides === "object" ? p.techniqueOverrides : {},
+          videoOverrides:
+            p.videoOverrides && typeof p.videoOverrides === "object"
+              ? Object.fromEntries(
+                  Object.entries(p.videoOverrides).filter(
+                    (entry): entry is [string, string] => typeof entry[0] === "string" && typeof entry[1] === "string"
+                  )
+                )
+              : {},
           customTechniques: Array.isArray(p.customTechniques) ? p.customTechniques : [],
           linkedGym:
             p.linkedGym && typeof p.linkedGym === "object" && (p.linkedGym as GymSyncPayload).version === 1

@@ -5,7 +5,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { POSITION_TABS, type PositionTab } from "../data/techniques";
 import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
 import { useGymStore, withAlpha } from "../store/gym";
-import { CURRICULUM_BELTS, defaultProgress, loadProgress, updateCurrentBelt, type BeltLevel, type UserProgress } from "../store/progress";
+import {
+  CURRICULUM_BELTS,
+  defaultProgress,
+  loadProgress,
+  setTechniqueMasteryLevel,
+  updateCurrentBelt,
+  type BeltLevel,
+  type TechniqueMasteryLevel,
+  type UserProgress,
+} from "../store/progress";
 
 type LibraryMode = "all" | "mine" | "learned";
 type PositionFilter = "All" | PositionTab;
@@ -193,28 +202,59 @@ export default function LibraryScreen() {
 
       {searched.map((tech) => {
         const mastered = progress.learnedTechniqueIds.includes(tech.id);
+        const masteryLevel = progress.masteryByTechniqueId[tech.id] ?? "novice";
         return (
-          <Pressable
+          <View
             key={tech.id}
-            onPress={() => router.push(`/technique/${tech.id}`)}
             style={{
               borderWidth: 1,
               borderColor: mastered ? "#D4B06A" : "#222",
               backgroundColor: "#0F0F0F",
               borderRadius: 14,
               padding: 12,
-              gap: 6,
+              gap: 8,
             }}
           >
-            <Text style={{ color: "#FFF", fontSize: 17, fontWeight: "800" }}>{tech.name}</Text>
-            <Text style={{ color: "#AAB2C2" }}>
-              {tech.category} • {tech.difficulty}
-            </Text>
-            <Text style={{ color: "#8E96A5" }}>{tech.shortDescription}</Text>
-            <Text style={{ color: mastered ? "#D4B06A" : accentColor, fontWeight: "800" }}>
-              {mastered ? "Mastered - Keep Sharp" : "Open Technique"}
-            </Text>
-          </Pressable>
+            <Pressable onPress={() => router.push(`/technique/${tech.id}`)}>
+              <Text style={{ color: "#FFF", fontSize: 17, fontWeight: "800" }}>{tech.name}</Text>
+              <Text style={{ color: "#AAB2C2", marginTop: 2 }}>
+                {tech.category} • {tech.difficulty}
+              </Text>
+              <Text style={{ color: "#8E96A5", marginTop: 4 }}>{tech.shortDescription}</Text>
+              <Text style={{ color: mastered ? "#D4B06A" : accentColor, fontWeight: "800", marginTop: 6 }}>
+                {mastered ? "Mastered - Keep Sharp" : "Open Technique"}
+              </Text>
+            </Pressable>
+            <View style={{ gap: 6 }}>
+              <Text style={{ color: "#8E96A5", fontWeight: "700", fontSize: 12 }}>Mastery Level</Text>
+              <View style={{ flexDirection: "row", gap: 6 }}>
+                {(["novice", "proficient", "master"] as TechniqueMasteryLevel[]).map((level) => {
+                  const selected = masteryLevel === level;
+                  return (
+                    <Pressable
+                      key={`${tech.id}-${level}`}
+                      onPress={() => {
+                        void setTechniqueMasteryLevel(tech.id, level).then(setProgress);
+                      }}
+                      style={{
+                        flex: 1,
+                        borderWidth: 1,
+                        borderColor: selected ? "#D4B06A" : "#2A2A2A",
+                        borderRadius: 999,
+                        paddingVertical: 6,
+                        alignItems: "center",
+                        backgroundColor: selected ? "rgba(212,176,106,0.18)" : "#111",
+                      }}
+                    >
+                      <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 12, textTransform: "capitalize" }}>
+                        {level}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
         );
       })}
 

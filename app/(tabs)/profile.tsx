@@ -120,7 +120,13 @@ export default function ProfileScreen() {
     (technique) => technique.belt === progress.currentBelt && !progress.learnedTechniqueIds.includes(technique.id)
   );
   const dailyWarmups = selectDailyWarmups(todayKey);
-  const myPendingAssignments = assignments.filter((item) => !(item.completedBy ?? []).includes(progress.profileName));
+  const myPendingAssignments = assignments.filter((item) => {
+    const assignedToMe =
+      !item.targetStudents || item.targetStudents.length === 0
+        ? true
+        : item.targetStudents.includes(progress.profileName);
+    return assignedToMe && !(item.completedBy ?? []).includes(progress.profileName);
+  });
   const assignmentRecommended = myPendingAssignments
     .flatMap((assignment) => assignment.linkedTechniqueIds ?? [])
     .map((id) => techniques.find((technique) => technique.id === id))
@@ -164,6 +170,14 @@ export default function ProfileScreen() {
     const top = sorted[0];
     return { label: top[0], percent: Math.round((top[1] / preferredIds.length) * 100) };
   }, [progress.learnedTechniqueIds, progress.myTechniques, techniques]);
+  const masteryCounts = useMemo(() => {
+    const levels = Object.values(progress.masteryByTechniqueId);
+    return {
+      novice: levels.filter((l) => l === "novice").length,
+      proficient: levels.filter((l) => l === "proficient").length,
+      master: levels.filter((l) => l === "master").length,
+    };
+  }, [progress.masteryByTechniqueId]);
 
   async function onToggleTask(task: DailyTask) {
     const wasDone = completedToday.includes(task.id);
@@ -435,6 +449,10 @@ export default function ProfileScreen() {
             <StatsGridTile
               label="Favorite Position"
               value={favoritePosition.percent > 0 ? `${favoritePosition.label} (${favoritePosition.percent}%)` : favoritePosition.label}
+            />
+            <StatsGridTile
+              label="Mastery Levels"
+              value={`N ${masteryCounts.novice} • P ${masteryCounts.proficient} • M ${masteryCounts.master}`}
             />
           </View>
         </View>

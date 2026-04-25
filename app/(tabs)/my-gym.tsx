@@ -11,17 +11,18 @@ import { POSITION_TABS } from "../data/techniques";
 import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
 import { useAssignmentsStore } from "../store/assignments";
 import { useGymStore, withAlpha } from "../store/gym";
-import { loadProgress } from "../store/progress";
+import { loadProgress, type UserProgress } from "../store/progress";
 import { explainLogoUrlIssue, isLikelyDirectImageUrl } from "../utils/gym-logo";
 import { pickGymLogoFromLibrary } from "../utils/pick-gym-logo";
 
-type TileId = "overview" | "announcements" | "assignments" | "completion" | "roster" | "schedule" | "customMoves" | "logo" | "qr" | "curriculum";
+type TileId = "overview" | "announcements" | "assignments" | "completion" | "roster" | "videos" | "schedule" | "customMoves" | "logo" | "qr" | "curriculum";
 const DEFAULT_TILE_ORDER: TileId[] = [
   "overview",
   "announcements",
   "assignments",
   "completion",
   "roster",
+  "videos",
   "schedule",
   "customMoves",
   "logo",
@@ -45,6 +46,9 @@ export default function MyGymScreen() {
   const duplicateScheduleClassToDays = useGymStore((s) => s.duplicateScheduleClassToDays);
   const upsertCustomTechnique = useGymStore((s) => s.upsertCustomTechnique);
   const removeCustomTechnique = useGymStore((s) => s.removeCustomTechnique);
+  const setVideoOverride = useGymStore((s) => s.setVideoOverride);
+  const clearVideoOverride = useGymStore((s) => s.clearVideoOverride);
+  const videoOverrides = useGymStore((s) => s.videoOverrides);
   const buildGymShareCode = useGymStore((s) => s.buildGymShareCode);
   const myGymTileOrder = useGymStore((s) => s.myGymTileOrder);
   const setMyGymTileOrder = useGymStore((s) => s.setMyGymTileOrder);
@@ -68,13 +72,17 @@ export default function MyGymScreen() {
   const [syncCode, setSyncCode] = useState(() => buildGymShareCode());
   const [isDraggingSchedule, setIsDraggingSchedule] = useState(false);
   const [myLibraryIds, setMyLibraryIds] = useState<string[]>([]);
+  const [progress, setProgress] = useState<UserProgress | null>(null);
   const [assignmentTitle, setAssignmentTitle] = useState("");
   const [assignmentDescription, setAssignmentDescription] = useState("");
   const [assignmentDueDate, setAssignmentDueDate] = useState("");
   const [assignmentTechniqueSearch, setAssignmentTechniqueSearch] = useState("");
   const [assignmentTechniqueIds, setAssignmentTechniqueIds] = useState<string[]>([]);
+  const [assignmentTargetStudents, setAssignmentTargetStudents] = useState<string[]>([]);
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [announcementDraft, setAnnouncementDraft] = useState("");
+  const [videoSearch, setVideoSearch] = useState("");
+  const [videoDrafts, setVideoDrafts] = useState<Record<string, string>>({});
   const [isReorderingTiles, setIsReorderingTiles] = useState(false);
 
   React.useEffect(() => {
@@ -82,7 +90,10 @@ export default function MyGymScreen() {
   }, [logoUrl]);
 
   React.useEffect(() => {
-    void loadProgress().then((progress) => setMyLibraryIds(progress.myTechniques));
+    void loadProgress().then((loaded) => {
+      setMyLibraryIds(loaded.myTechniques);
+      setProgress(loaded);
+    });
   }, []);
 
   React.useEffect(() => {
@@ -93,6 +104,7 @@ export default function MyGymScreen() {
       setAssignmentDueDate("");
       setAssignmentTechniqueSearch("");
       setAssignmentTechniqueIds([]);
+      setAssignmentTargetStudents([]);
     }
   }, [newAssignment]);
 
@@ -110,12 +122,23 @@ export default function MyGymScreen() {
   const rosterStats = useMemo(
     () =>
       roster.map((student) => {
-        const completed = assignments.filter((item) => (item.completedBy ?? []).includes(student)).length;
+        const completed = assignments.filter((item) => (item.completedBy ?? []).includes(student.name)).length;
         const completionPercent = assignments.length > 0 ? Math.round((completed / assignments.length) * 100) : 0;
-        return { student, completed, completionPercent };
+        const masteredEstimate = estimateStudentMasteredCount(student.name, progress?.learnedTechniqueIds.length ?? 0);
+        return { student, completed, completionPercent, masteredEstimate };
       }),
-    [assignments, roster]
+    [assignments, progress?.learnedTechniqueIds.length, roster]
   );
+
+  const videoTechniqueChoices = resolvedTechniques.filter((technique) => {
+    const q = videoSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      technique.name.toLowerCase().includes(q) ||
+      technique.position.toLowerCase().includes(q) ||
+      technique.category.toLowerCase().includes(q)
+    );
+  });
 
   const fromStore = myGymTileOrder.filter((id): id is TileId => DEFAULT_TILE_ORDER.includes(id as TileId));
   const missingTiles = DEFAULT_TILE_ORDER.filter((id) => !fromStore.includes(id));
@@ -221,7 +244,13 @@ export default function MyGymScreen() {
       Alert.alert("Invalid due date", "Use YYYY-MM-DD format for due date.");
       return;
     }
-    const payload = { title, description, dueDate: due || undefined, linkedTechniqueIds: assignmentTechniqueIds };
+    const payload = {
+      title,
+      description,
+      dueDate: due || undefined,
+      linkedTechniqueIds: assignmentTechniqueIds,
+      targetStudents: assignmentTargetStudents,
+    };
     if (editingAssignmentId) updateAssignment(editingAssignmentId, payload);
     else createAssignment(payload);
     clearAssignmentDraft();
@@ -234,6 +263,7 @@ export default function MyGymScreen() {
     setAssignmentDueDate("");
     setAssignmentTechniqueSearch("");
     setAssignmentTechniqueIds([]);
+    setAssignmentTargetStudents([]);
   }
 
   function startEditAssignment(id: string) {
@@ -244,6 +274,7 @@ export default function MyGymScreen() {
     setAssignmentDescription(assignment.description);
     setAssignmentDueDate(assignment.dueDate ?? "");
     setAssignmentTechniqueIds(assignment.linkedTechniqueIds ?? []);
+    setAssignmentTargetStudents(assignment.targetStudents ?? []);
   }
 
   function confirmDeleteAssignment(id: string) {
@@ -266,6 +297,16 @@ export default function MyGymScreen() {
     return resolvedTechniques.find((item) => item.id === id)?.name ?? id;
   }
 
+  function toggleTargetStudent(name: string) {
+    setAssignmentTargetStudents((prev) =>
+      prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name]
+    );
+  }
+
+  function setVideoDraft(techniqueId: string, value: string) {
+    setVideoDrafts((prev) => ({ ...prev, [techniqueId]: value }));
+  }
+
   function renderTile(id: TileId) {
     if (id === "overview") {
       return (
@@ -279,6 +320,11 @@ export default function MyGymScreen() {
             <MiniStat label="Roster" value={String(roster.length)} />
             <MiniStat label="Announcements" value={String(announcements.length)} />
           </View>
+          <Text style={{ color: "#8E96A5" }}>
+            {progress
+              ? `Student mastery map: ${Object.keys(progress.masteryByTechniqueId).length} tracked techniques.`
+              : "Loading student mastery map..."}
+          </Text>
         </View>
       );
     }
@@ -323,6 +369,32 @@ export default function MyGymScreen() {
           <TextInput value={assignmentTitle} onChangeText={setAssignmentTitle} placeholder="Title (e.g. Week 3 Guard Retention)" placeholderTextColor="#5D6574" style={inputStyle} />
           <TextInput value={assignmentDescription} onChangeText={setAssignmentDescription} placeholder="Description / coaching objective" placeholderTextColor="#5D6574" multiline style={[inputStyle, { minHeight: 84, textAlignVertical: "top" }]} />
           <TextInput value={assignmentDueDate} onChangeText={setAssignmentDueDate} placeholder="Due date (YYYY-MM-DD)" placeholderTextColor="#5D6574" style={inputStyle} />
+          <Text style={{ color: "#8E96A5", fontWeight: "700", fontSize: 12 }}>
+            Assign to roster (leave all unselected for entire team)
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {roster.map((student) => {
+              const on = assignmentTargetStudents.includes(student.name);
+              return (
+                <Pressable
+                  key={`target-${student.name}`}
+                  onPress={() => toggleTargetStudent(student.name)}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: on ? "#D4B06A" : "#2A2A2A",
+                    borderRadius: 999,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    backgroundColor: on ? "rgba(212,176,106,0.16)" : "#111",
+                  }}
+                >
+                  <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 12 }}>
+                    {student.name} ({student.belt})
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
           <TextInput value={assignmentTechniqueSearch} onChangeText={setAssignmentTechniqueSearch} placeholder="Search My Library techniques to link" placeholderTextColor="#5D6574" style={inputStyle} />
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {ownerTechniqueChoices.slice(0, 14).map((technique) => {
@@ -366,6 +438,13 @@ export default function MyGymScreen() {
                     <Text style={{ color: "#AAB2C2" }}>{assignment.description}</Text>
                     {assignment.dueDate ? <Text style={{ color: "#8E96A5" }}>Due: {assignment.dueDate}</Text> : null}
                     {(assignment.linkedTechniqueIds ?? []).length > 0 ? <Text style={{ color: "#D4B06A", fontSize: 12 }}>Linked: {(assignment.linkedTechniqueIds ?? []).map((tid) => getTechniqueName(tid)).join(", ")}</Text> : null}
+                    {(assignment.targetStudents ?? []).length > 0 ? (
+                      <Text style={{ color: "#AAB2C2", fontSize: 12 }}>
+                        Assigned to: {(assignment.targetStudents ?? []).join(", ")}
+                      </Text>
+                    ) : (
+                      <Text style={{ color: "#AAB2C2", fontSize: 12 }}>Assigned to: Entire roster</Text>
+                    )}
                     <Text style={{ color: "#8E96A5", fontSize: 12 }}>Completed by: {(assignment.completedBy ?? []).length > 0 ? assignment.completedBy?.join(", ") : "No one yet"}</Text>
                     <View style={{ flexDirection: "row", gap: 8 }}>
                       <Pressable onPress={() => startEditAssignment(assignment.id)} style={tinyAction}>
@@ -389,16 +468,71 @@ export default function MyGymScreen() {
           <Text style={title}>Student roster pulse</Text>
           <Text style={{ color: "#8E96A5" }}>Prototype roster with completion visibility for quick coach check-ins.</Text>
           {rosterStats.map((item) => (
-            <View key={item.student} style={chipCard}>
+            <View key={item.student.name} style={chipCard}>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>{item.student}</Text>
+                <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>
+                  {item.student.name} • {item.student.belt}
+                </Text>
                 <Text style={{ color: "#D4B06A", fontWeight: "800" }}>{item.completionPercent}%</Text>
               </View>
               <Text style={{ color: "#9AA2B1", marginTop: 4 }}>
                 {item.completed}/{assignments.length || 0} assignments complete
               </Text>
+              <Text style={{ color: "#9AA2B1", marginTop: 2 }}>
+                Simulated mastery progress: {item.masteredEstimate} techniques mastered
+              </Text>
             </View>
           ))}
+        </View>
+      );
+    }
+    if (id === "videos") {
+      return (
+        <View style={card}>
+          <Text style={title}>Gym preferred videos</Text>
+          <Text style={{ color: "#8E96A5" }}>
+            Override any technique video with your gym&apos;s private or preferred link. Students in Gym Mode see this first.
+          </Text>
+          <TextInput
+            value={videoSearch}
+            onChangeText={setVideoSearch}
+            placeholder="Search techniques..."
+            placeholderTextColor="#5D6574"
+            style={inputStyle}
+          />
+          {videoTechniqueChoices.slice(0, 8).map((technique) => {
+            const current = videoOverrides[technique.id] ?? "";
+            const draft = videoDrafts[technique.id] ?? current;
+            return (
+              <View key={`video-${technique.id}`} style={chipCard}>
+                <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>{technique.name}</Text>
+                <TextInput
+                  value={draft}
+                  onChangeText={(value) => setVideoDraft(technique.id, value)}
+                  placeholder="https://... private or preferred link"
+                  placeholderTextColor="#5D6574"
+                  style={[inputStyle, { fontSize: 13 }]}
+                />
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <Pressable
+                    onPress={() => setVideoOverride(technique.id, draft)}
+                    style={[primaryButton, { flex: 1 }]}
+                  >
+                    <Text style={buttonText}>Save Override</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      clearVideoOverride(technique.id);
+                      setVideoDraft(technique.id, "");
+                    }}
+                    style={[secondaryButton, { flex: 1 }]}
+                  >
+                    <Text style={buttonText}>Clear</Text>
+                  </Pressable>
+                </View>
+              </View>
+            );
+          })}
         </View>
       );
     }
@@ -544,6 +678,12 @@ function EmptyCard({ text }: { text: string }) {
       <Text style={{ color: "#8E96A5" }}>{text}</Text>
     </View>
   );
+}
+
+function estimateStudentMasteredCount(name: string, baseline: number): number {
+  const hash = [...name].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const offset = (hash % 12) - 4;
+  return Math.max(0, baseline + offset);
 }
 
 const card = {
