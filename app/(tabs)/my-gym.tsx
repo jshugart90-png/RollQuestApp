@@ -11,6 +11,7 @@ import type { PositionTab, Technique } from "../data/techniques";
 import { POSITION_TABS } from "../data/techniques";
 import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
 import { useAssignmentsStore } from "../store/assignments";
+import { canManageGym, useAuthStore } from "../store/auth";
 import { useGymStore, withAlpha } from "../store/gym";
 import { loadProgress, type UserProgress } from "../store/progress";
 import { pendingRequestsForGym, useTechniqueRequestStore } from "../store/techniqueRequests";
@@ -71,6 +72,8 @@ export default function MyGymScreen() {
   const myGymTileOrder = useGymStore((s) => s.myGymTileOrder);
   const setMyGymTileOrder = useGymStore((s) => s.setMyGymTileOrder);
   const gymId = useGymStore((s) => s.gymId);
+  const role = useAuthStore((s) => s.role);
+  const canManage = canManageGym(role);
 
   const assignments = useAssignmentsStore((s) => s.assignments);
   const roster = useAssignmentsStore((s) => s.roster);
@@ -176,13 +179,15 @@ export default function MyGymScreen() {
   const missingTiles = DEFAULT_TILE_ORDER.filter((id) => !fromStore.includes(id));
   const tileOrder: TileId[] = [...fromStore, ...missingTiles];
 
-  if (!isGymMode) {
+  if (!isGymMode || !canManage) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["top"]}>
         <View style={{ padding: 20, gap: 14 }}>
           <Text style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "900" }}>My Gym</Text>
           <Text style={{ color: "#AAB2C2", lineHeight: 22 }}>
-            Turn on Gym Owner Mode to unlock announcements, assignment workflows, roster tracking, and share tools.
+            {!isGymMode
+              ? "Turn on Gym Owner Mode to unlock announcements, assignment workflows, roster tracking, and share tools."
+              : "Coach/owner role required for gym management tools. Update role in Settings."}
           </Text>
           <Link href="/settings" asChild>
             <Pressable

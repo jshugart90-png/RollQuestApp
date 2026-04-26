@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSyncStore } from "./sync";
 
 const PROGRESS_KEY = "rollquest.progress.v1";
 const LEGACY_MY_TECHNIQUES_KEY = "rollquest.myTechniques.v1";
@@ -233,6 +234,11 @@ export async function registerActivity(activityDate = startOfTodayDateString()):
     totalSessionsLogged: progress.totalSessionsLogged + 1,
   };
   await saveProgress(updated);
+  queueSyncEvent(updated.activeGymId, "activity.logged", {
+    activityDate,
+    streakCount: updated.streakCount,
+    totalSessionsLogged: updated.totalSessionsLogged,
+  });
   return updated;
 }
 
@@ -333,6 +339,12 @@ export async function rateTechniqueRecall(techniqueId: string, remembered: boole
     },
   };
   await saveProgress(updated);
+  queueSyncEvent(progress.activeGymId, "technique.recallRated", {
+    techniqueId,
+    remembered,
+    reviewStrength: nextStrength,
+    lastReviewed: today,
+  });
   return registerActivity(today);
 }
 
@@ -354,6 +366,10 @@ export async function setTechniqueMasteryLevel(
     },
   };
   await saveProgress(updated);
+  queueSyncEvent(progress.activeGymId, "technique.masterySet", {
+    techniqueId,
+    level,
+  });
   return registerActivity(today);
 }
 
@@ -379,6 +395,7 @@ export async function markAnnouncementsRead(ids: string[]): Promise<UserProgress
   const next = [...new Set([...progress.readAnnouncementIds, ...incoming])];
   const updated = { ...progress, readAnnouncementIds: next };
   await saveProgress(updated);
+  queueSyncEvent(progress.activeGymId, "announcements.read", { ids: incoming });
   return updated;
 }
 
@@ -416,5 +433,15 @@ export async function toggleDailyTaskCompleted(taskId: string, date = startOfTod
     },
   };
   await saveProgress(updated);
+  queueSyncEvent(progress.activeGymId, "dailyTask.toggled", {
+    taskId,
+    date,
+    completed: !alreadyDone,
+  });
   return alreadyDone ? updated : registerActivity(date);
+}
+
+function queueSyncEvent(gymId: string | null, type: string, payload: unknown) {
+  if (!gymId) return;
+  useSyncStore.getState().queueEvent({ gymId, type, payload });
 }

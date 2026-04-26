@@ -1,10 +1,16 @@
-import { Link } from "expo-router";
+import type { Href } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Alert, Modal, Pressable, ScrollView, Switch, Text, TextInput, TouchableWithoutFeedback, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGymStore, withAlpha } from "../store/gym";
 import { setActiveProgressGymId } from "../store/progress";
+import { useSyncStore } from "../store/sync";
+import { useAuthStore, type AppRole } from "../store/auth";
+import { useUiPreferencesStore } from "../store/uiPreferences";
+import { exportBackup, importBackup } from "../services/backup";
+import { useSessionStore } from "../store/session";
 
 const PRESET_COLORS = [
   "#C8102E",
@@ -18,6 +24,7 @@ const PRESET_COLORS = [
 ];
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const {
     gymName,
     accentColor,
@@ -36,6 +43,22 @@ export default function SettingsScreen() {
   const [scanOpen, setScanOpen] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [isHandlingScan, setIsHandlingScan] = useState(false);
+  const pendingSyncCount = useSyncStore((s) => s.pending.length);
+  const lastSyncedAt = useSyncStore((s) => s.lastSyncedAt);
+  const lastSyncError = useSyncStore((s) => s.lastSyncError);
+  const isSyncing = useSyncStore((s) => s.isSyncing);
+  const flushSync = useSyncStore((s) => s.flush);
+  const role = useAuthStore((s) => s.role);
+  const setRole = useAuthStore((s) => s.setRole);
+  const reducedMotion = useUiPreferencesStore((s) => s.reducedMotion);
+  const highContrast = useUiPreferencesStore((s) => s.highContrast);
+  const textScale = useUiPreferencesStore((s) => s.textScale);
+  const setReducedMotion = useUiPreferencesStore((s) => s.setReducedMotion);
+  const setHighContrast = useUiPreferencesStore((s) => s.setHighContrast);
+  const setTextScale = useUiPreferencesStore((s) => s.setTextScale);
+  const [backupJson, setBackupJson] = useState("");
+  const email = useSessionStore((s) => s.email);
+  const signOut = useSessionStore((s) => s.signOut);
 
   const modeLabel = useMemo(() => (isGymMode ? "Gym owner mode" : "Personal mode"), [isGymMode]);
   async function onJoinGym() {
@@ -128,6 +151,115 @@ export default function SettingsScreen() {
             gap: 10,
           }}
         >
+          <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>Account</Text>
+          <Text style={{ color: "#AAB2C2" }}>{email ? `Signed in as ${email}` : "Signed in (local session)"}</Text>
+          <Pressable
+            onPress={() =>
+              void signOut().then(() => {
+                Alert.alert("Signed out", "You have been signed out.");
+                router.replace("/sign-in" as Href);
+              })
+            }
+            style={{
+              borderRadius: 10,
+              paddingVertical: 10,
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: "#5A1F1F",
+              backgroundColor: "#2A1111",
+            }}
+          >
+            <Text style={{ color: "#FFD6D6", fontWeight: "900" }}>Sign out</Text>
+          </Pressable>
+        </View>
+
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "#222",
+            backgroundColor: "#101010",
+            borderRadius: 14,
+            padding: 14,
+            gap: 10,
+          }}
+        >
+          <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>Account role</Text>
+          <Text style={{ color: "#8E96A5", lineHeight: 20 }}>
+            Controls gym management capabilities when backend auth is enabled.
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {(["student", "coach", "owner"] as AppRole[]).map((candidateRole) => {
+              const selected = role === candidateRole;
+              return (
+                <Pressable
+                  key={candidateRole}
+                  onPress={() => setRole(candidateRole)}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: selected ? "#D4B06A" : "#2A2A2A",
+                    borderRadius: 999,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    backgroundColor: selected ? "rgba(212,176,106,0.18)" : "#0D0D0D",
+                  }}
+                >
+                  <Text style={{ color: "#FFFFFF", textTransform: "capitalize", fontWeight: "800" }}>{candidateRole}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "#222",
+            backgroundColor: "#101010",
+            borderRadius: 14,
+            padding: 14,
+            gap: 10,
+          }}
+        >
+          <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>Accessibility</Text>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={{ color: "#AAB2C2" }}>Reduced motion</Text>
+            <Switch value={reducedMotion} onValueChange={setReducedMotion} />
+          </View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={{ color: "#AAB2C2" }}>High contrast accents</Text>
+            <Switch value={highContrast} onValueChange={setHighContrast} />
+          </View>
+          <Text style={{ color: "#8E96A5", fontSize: 12 }}>Text scale: {Math.round(textScale * 100)}%</Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {[0.95, 1, 1.1, 1.2].map((scale) => (
+              <Pressable
+                key={scale}
+                onPress={() => setTextScale(scale)}
+                style={{
+                  borderWidth: 1,
+                  borderColor: Math.abs(textScale - scale) < 0.01 ? "#D4B06A" : "#2A2A2A",
+                  borderRadius: 999,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  backgroundColor: Math.abs(textScale - scale) < 0.01 ? "rgba(212,176,106,0.18)" : "#0D0D0D",
+                }}
+              >
+                <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>{Math.round(scale * 100)}%</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "#222",
+            backgroundColor: "#101010",
+            borderRadius: 14,
+            padding: 14,
+            gap: 10,
+          }}
+        >
           <Text style={{ color: "#8E96A5", fontWeight: "700" }}>Display name</Text>
           <TextInput
             value={nameInput}
@@ -147,6 +279,83 @@ export default function SettingsScreen() {
             }}
           />
           <Text style={{ color: "#8E96A5", fontSize: 12 }}>Shown in the header and on the Schedule screen.</Text>
+        </View>
+
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "#222",
+            backgroundColor: "#101010",
+            borderRadius: 14,
+            padding: 14,
+            gap: 10,
+          }}
+        >
+          <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>Backup & restore</Text>
+          <Text style={{ color: "#8E96A5", lineHeight: 20 }}>
+            Export all local app data to JSON for safe backup, then paste to restore on this device.
+          </Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable
+              onPress={() =>
+                void exportBackup().then((value) => {
+                  setBackupJson(value);
+                  Alert.alert("Backup ready", "Backup JSON loaded in the field below.");
+                })
+              }
+              style={{
+                flex: 1,
+                borderRadius: 10,
+                paddingVertical: 10,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: withAlpha(accentColor, 0.75),
+                backgroundColor: withAlpha(accentColor, 0.2),
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Export</Text>
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                void importBackup(backupJson).then((result) => {
+                  if (!result.ok) {
+                    Alert.alert("Restore failed", result.message);
+                    return;
+                  }
+                  Alert.alert("Restore complete", "Backup restored. Restart app to reload stores.");
+                })
+              }
+              style={{
+                flex: 1,
+                borderRadius: 10,
+                paddingVertical: 10,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: "#333",
+                backgroundColor: "#161616",
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Restore</Text>
+            </Pressable>
+          </View>
+          <TextInput
+            value={backupJson}
+            onChangeText={setBackupJson}
+            placeholder="Backup JSON..."
+            placeholderTextColor="#5D6574"
+            multiline
+            style={{
+              minHeight: 120,
+              borderWidth: 1,
+              borderColor: "#2A2A2A",
+              borderRadius: 10,
+              backgroundColor: "#0F0F0F",
+              color: "#FFFFFF",
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              textAlignVertical: "top",
+            }}
+          />
         </View>
 
         <View
@@ -327,6 +536,47 @@ export default function SettingsScreen() {
             ) : null}
           </View>
         ) : null}
+
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "#222",
+            backgroundColor: "#101010",
+            borderRadius: 14,
+            padding: 14,
+            gap: 10,
+          }}
+        >
+          <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>Sync center</Text>
+          <Text style={{ color: "#8E96A5", lineHeight: 20 }}>
+            Reliable event queue for backend sync. Keeps pending updates when offline and retries later.
+          </Text>
+          <Text style={{ color: "#D4B06A", fontWeight: "800" }}>
+            Pending events: {pendingSyncCount} {isSyncing ? "• Syncing..." : ""}
+          </Text>
+          <Text style={{ color: "#8E96A5", fontSize: 12 }}>
+            Last sync: {lastSyncedAt ? new Date(lastSyncedAt).toLocaleString() : "Never"}
+          </Text>
+          {lastSyncError ? <Text style={{ color: "#F29A9A", fontSize: 12 }}>{lastSyncError}</Text> : null}
+          <Pressable
+            onPress={() => void flushSync()}
+            style={{
+              borderRadius: 10,
+              paddingVertical: 10,
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: withAlpha(accentColor, 0.75),
+              backgroundColor: withAlpha(accentColor, 0.2),
+              opacity: isSyncing ? 0.65 : 1,
+            }}
+            disabled={isSyncing}
+          >
+            <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{isSyncing ? "Syncing..." : "Sync now"}</Text>
+          </Pressable>
+          <Text style={{ color: "#6F7785", fontSize: 11 }}>
+            Configure `EXPO_PUBLIC_ROLLQUEST_SYNC_URL` and optional `EXPO_PUBLIC_ROLLQUEST_SYNC_KEY` to connect backend.
+          </Text>
+        </View>
 
         <Pressable
           onPress={resetGymSettings}

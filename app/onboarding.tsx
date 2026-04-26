@@ -3,8 +3,10 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuthStore } from "./store/auth";
 import { CURRICULUM_BELTS, updateCurrentBelt, updateProfileName, type BeltLevel } from "./store/progress";
 import { useGymStore, withAlpha } from "./store/gym";
+import { useUiPreferencesStore } from "./store/uiPreferences";
 
 const BELTS = CURRICULUM_BELTS as unknown as BeltLevel[];
 
@@ -14,6 +16,9 @@ export default function OnboardingScreen() {
   const accentColor = useGymStore((s) => s.accentColor);
   const completeOnboarding = useGymStore((s) => s.completeOnboarding);
   const setIsGymMode = useGymStore((s) => s.setIsGymMode);
+  const setRole = useAuthStore((s) => s.setRole);
+  const reducedMotion = useUiPreferencesStore((s) => s.reducedMotion);
+  const setReducedMotion = useUiPreferencesStore((s) => s.setReducedMotion);
 
   const [step, setStep] = useState(0);
   const [modeChoice, setModeChoice] = useState<"personal" | "gym" | null>(null);
@@ -31,6 +36,7 @@ export default function OnboardingScreen() {
       }
       await updateCurrentBelt(belt);
       setIsGymMode(modeChoice === "gym");
+      setRole(modeChoice === "gym" ? "owner" : "student");
       completeOnboarding();
       router.replace("/schedule" as Href);
     } finally {
@@ -150,6 +156,35 @@ export default function OnboardingScreen() {
                 ? "My Gym is enabled. Head to Settings anytime to brand your academy, share a sync code with students, and post announcements."
                 : "Stay in personal mode for a clean training log. Join a gym later from Settings with a coach sync code."}
             </Text>
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "#2A2A2A",
+                borderRadius: 12,
+                backgroundColor: "#0F0F0F",
+                padding: 12,
+                gap: 8,
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>Comfort mode</Text>
+              <Text style={{ color: "#8E96A5", lineHeight: 20 }}>
+                Toggle reduced motion now. You can always change this later in Settings.
+              </Text>
+              <Pressable
+                onPress={() => setReducedMotion(!reducedMotion)}
+                style={{
+                  borderWidth: 1,
+                  borderColor: reducedMotion ? "#D4B06A" : "#2A2A2A",
+                  borderRadius: 999,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  alignSelf: "flex-start",
+                  backgroundColor: reducedMotion ? "rgba(212,176,106,0.18)" : "#101010",
+                }}
+              >
+                <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>{reducedMotion ? "Reduced motion ON" : "Reduced motion OFF"}</Text>
+              </Pressable>
+            </View>
             <Pressable
               onPress={() => void finish()}
               disabled={saving}

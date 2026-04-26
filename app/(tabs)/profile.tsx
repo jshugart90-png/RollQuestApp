@@ -7,7 +7,11 @@ import { Animated, Easing, Modal, Platform, Pressable, ScrollView, Text, TextInp
 import Svg, { Circle } from "react-native-svg";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useResolvedTechniques } from "../hooks/useResolvedTechniques";
+import { buildRollingChallenges } from "../engines/challenges";
+import { summarizeProgression } from "../engines/progression";
+import { buildSmartReviewQueue } from "../engines/review";
 import { useAssignmentsStore } from "../store/assignments";
+import { useChallengesStore } from "../store/challenges";
 import { useGymStore, withAlpha } from "../store/gym";
 import { pendingRequestsForGym, useTechniqueRequestStore } from "../store/techniqueRequests";
 import {
@@ -24,6 +28,9 @@ import {
   type TechniqueMasteryLevel,
   type UserProgress,
 } from "../store/progress";
+import { useUiPreferencesStore } from "../store/uiPreferences";
+import { insertChallengeCompletion, insertRollingLog } from "../services/supabase/repositories";
+import { useSessionStore } from "../store/session";
 
 const BELTS = CURRICULUM_BELTS as unknown as BeltLevel[];
 
@@ -61,6 +68,11 @@ export default function ProfileScreen() {
   const techniques = useResolvedTechniques();
   const assignments = useAssignmentsStore((state) => state.assignments);
   const techniqueRequests = useTechniqueRequestStore((state) => state.requests);
+  const challengeCompletionsByDate = useChallengesStore((state) => state.completionsByDate);
+  const addRollingLog = useChallengesStore((state) => state.addRollingLog);
+  const completeChallenge = useChallengesStore((state) => state.completeChallenge);
+  const reducedMotion = useUiPreferencesStore((state) => state.reducedMotion);
+  const userId = useSessionStore((state) => state.userId);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -162,17 +174,16 @@ export default function ProfileScreen() {
   ].slice(0, 4);
 
   const readyForReview = reviewPriority.slice(0, 6);
-  const reviewQueue: ReviewQueueItem[] = useMemo(() => {
-    const candidates = candidateTechniques.map((technique) => {
-      const days = daysSince(progress.lastReviewedByTechniqueId[technique.id]);
-      const strength = progress.reviewStrengthByTechniqueId[technique.id] ?? 2;
-      const targetInterval = 2 + strength * 2;
-      const overdue = Math.max(0, days - targetInterval);
-      const score = overdue * 2 + days + (5 - strength) * 3;
-      return { technique, days, strength, score };
-    });
-    return candidates.sort((a, b) => b.score - a.score);
-  }, [candidateTechniques, progress.lastReviewedByTechniqueId, progress.reviewStrengthByTechniqueId]);
+  const reviewQueue: ReviewQueueItem[] = useMemo(
+    () =>
+      buildSmartReviewQueue(candidateTechniques, progress).map((item) => ({
+        technique: { id: item.technique.id, name: item.technique.name, position: item.technique.position },
+        days: item.daysSinceReview,
+        strength: item.recallStrength,
+        score: item.urgencyScore,
+      })),
+    [candidateTechniques, progress]
+  );
 
   const favoritePosition = useMemo(() => {
     const preferredIds = [...new Set([...progress.myTechniques, ...progress.learnedTechniqueIds])];
@@ -196,6 +207,12 @@ export default function ProfileScreen() {
       master: levels.filter((l) => l === "master").length,
     };
   }, [progress.masteryByTechniqueId]);
+  const progressionSummary = useMemo(() => summarizeProgression(techniques, progress), [techniques, progress]);
+  const rollingChallenges = useMemo(
+    () => buildRollingChallenges(techniques, progress, todayKey),
+    [progress, techniques, todayKey]
+  );
+  const completedChallengesToday = challengeCompletionsByDate[todayKey] ?? [];
 
   async function onToggleTask(task: DailyTask) {
     const wasDone = completedToday.includes(task.id);
@@ -251,6 +268,7 @@ export default function ProfileScreen() {
 
   function triggerCelebration(message: string) {
     setCelebrationText(message);
+    if (reducedMotion) return;
     celebrationAnim.setValue(0);
     Animated.sequence([
       Animated.timing(celebrationAnim, {
@@ -271,6 +289,7 @@ export default function ProfileScreen() {
 
   function triggerStreakCelebration(nextStreak: number) {
     setCelebrationText(`Streak up! You are now at ${nextStreak} days.`);
+    if (reducedMotion) return;
     streakPulseAnim.setValue(0);
     Animated.sequence([
       Animated.timing(streakPulseAnim, {
@@ -586,6 +605,103 @@ export default function ProfileScreen() {
               label="Mastery Levels"
               value={`N ${masteryCounts.novice} • P ${masteryCounts.proficient} • M ${masteryCounts.master}`}
             />
+          </View>
+        </View>
+
+        <View style={glassCard}>
+          <Text style={sectionTitle}>Progression Engine</Text>
+          <Text style={sectionSubtle}>Readiness model for your next milestone.</Text>
+          <View
+            style={{
+              marginTop: 10,
+              borderWidth: 1,
+              borderColor: "#242424",
+              borderRadius: 12,
+              backgroundColor: "#0C0C0C",
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 18 }}>
+              {progressionSummary.readinessScore}% ready • {progressionSummary.belt} belt
+            </Text>
+            <Text style={{ color: "#AAB2C2", marginTop: 4 }}>
+              {progressionSummary.masteredInBelt}/{progressionSummary.totalInBelt} mastered in current curriculum
+            </Text>
+            <Text style={{ color: "#D4B06A", marginTop: 6, fontWeight: "800" }}>{progressionSummary.nextMilestone}</Text>
+          </View>
+        </View>
+
+        <View style={glassCard}>
+          <Text style={sectionTitle}>Rolling Challenges</Text>
+          <Text style={sectionSubtle}>Land these live and tap complete.</Text>
+          <View style={{ gap: 8, marginTop: 10 }}>
+            {rollingChallenges.length === 0 ? (
+              <Text style={{ color: "#AAB2C2" }}>Add and review techniques to unlock personalized move challenges.</Text>
+            ) : (
+              rollingChallenges.map((challenge) => (
+                <View
+                  key={challenge.id}
+                  style={{ borderWidth: 1, borderColor: "#242424", borderRadius: 12, backgroundColor: "#0C0C0C", padding: 12 }}
+                >
+                  <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{challenge.techniqueName}</Text>
+                  <Text style={{ color: "#8E96A5", fontSize: 12, marginTop: 2 }}>
+                    Source: {challenge.source === "mastered" ? "Mastered move" : challenge.source === "recent" ? "Recently worked" : "Work-in-progress"}
+                  </Text>
+                  {completedChallengesToday.some((c) => c.challengeId === challenge.id) ? (
+                    <Text style={{ color: "#47B96E", marginTop: 6, fontWeight: "800" }}>Completed today ✓</Text>
+                  ) : null}
+                  <Pressable
+                    onPress={() => {
+                      completeChallenge(todayKey, {
+                        challengeId: challenge.id,
+                        techniqueId: challenge.techniqueId,
+                        techniqueName: challenge.techniqueName,
+                      });
+                      addRollingLog({
+                        techniqueId: challenge.techniqueId,
+                        techniqueName: challenge.techniqueName,
+                        className: "Class Rolling",
+                        notes: "Challenge completed live.",
+                      });
+                      const gymId = progress.activeGymId ?? undefined;
+                      void insertChallengeCompletion({
+                        gym_id: gymId,
+                        user_id: userId ?? undefined,
+                        date_key: todayKey,
+                        challenge_id: challenge.id,
+                        technique_id: challenge.techniqueId,
+                        technique_name: challenge.techniqueName,
+                      });
+                      void insertRollingLog({
+                        gym_id: gymId,
+                        user_id: userId ?? undefined,
+                        technique_id: challenge.techniqueId,
+                        technique_name: challenge.techniqueName,
+                        class_name: "Class Rolling",
+                        notes: "Challenge completed live.",
+                      });
+                      void onToggleTask({
+                        id: `challenge-${challenge.techniqueId}-${todayKey}`,
+                        label: `Challenge ${challenge.techniqueName}`,
+                        type: "technique",
+                        techniqueId: challenge.techniqueId,
+                      });
+                    }}
+                    style={({ pressed }) => ({
+                      marginTop: 10,
+                      borderWidth: 1,
+                      borderColor: withAlpha(accentColor, 0.75),
+                      borderRadius: 10,
+                      paddingVertical: 10,
+                      alignItems: "center",
+                      backgroundColor: withAlpha(accentColor, pressed ? 0.28 : 0.16),
+                    })}
+                  >
+                    <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>I hit this in class</Text>
+                  </Pressable>
+                </View>
+              ))
+            )}
           </View>
         </View>
 

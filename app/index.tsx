@@ -3,10 +3,12 @@ import { Redirect } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useGymStore } from "./store/gym";
+import { useSessionStore } from "./store/session";
 
 export default function RootIndex() {
   const [hydrated, setHydrated] = useState(() => useGymStore.persist.hasHydrated());
   const hasCompletedOnboarding = useGymStore((s) => s.hasCompletedOnboarding);
+  const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
 
   useEffect(() => {
     if (useGymStore.persist.hasHydrated()) {
@@ -27,6 +29,10 @@ export default function RootIndex() {
 
   if (!hasCompletedOnboarding) {
     return <Redirect href={"/onboarding" as Href} />;
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect href={"/sign-in" as Href} />;
   }
 
   return <Redirect href={"/schedule" as Href} />;
